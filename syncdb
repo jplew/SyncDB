@@ -312,7 +312,7 @@ get_remote_db_details () {
 
 # ---------------------------------------------------------
 # backup_remote_db ()
-# Back up the remote MySQL database. The dump's filename is prepended with the current date and time. For example 20130902-1230-database.mssql.bz2.
+# Back up the remote MySQL database to latest-remote.mssql.bz2 (or whatever you set $r_db_name to). Another backup dump is created with its name prepended by the current date and time. For example 20130902-1230-database.mssql.bz2.
 # ---------------------------------------------------------
 backup_remote_db () {
 
@@ -527,11 +527,11 @@ upload_script () {
 
 
 # ---------------------------------------------------------
-# do_login_backup ()
+# do_remote_backup ()
 # Login to the remote server via SSH and call backup_remote_db(). Meant to be
 # run locally.
 # ---------------------------------------------------------
-do_login_backup () {
+do_remote_backup () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
@@ -746,7 +746,7 @@ install_search_scripts () {
 
 
 # ---------------------------------------------------------
-# search_replace_remote ()
+# search_replace_local ()
 # Install the Search and Replace Tools locally then execute them.
 # ---------------------------------------------------------
 search_replace_local () {
@@ -911,7 +911,7 @@ push () {
 
     upload_script
 
-    do_login_backup
+    do_remote_backup
 
     do_remote_operations
 
@@ -935,7 +935,7 @@ pull () {
 
     upload_script
 
-    do_login_backup
+    do_remote_backup
 
     download_remote_db
 
