@@ -1,8 +1,6 @@
 SyncDB v0.1
 ==========
 
-by JP Lew
-
 SyncDB is bash deploy script meant to take the tedium out of synchronizing local and remote versions of a Wordpress site. It allows developers working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes to or from their production server with a single terminal command. 
 
 SyncDB synchronizes your sites by executing a sequence of shell commands. It uses `mysql` and `mysqldump` for your database, `rsync` for your uploads folder, and leaves it up to you to synchronize your themes, plugins, etc (I use `git` for this).
@@ -125,7 +123,7 @@ All commands are meant to be executed locally, unless noted with *(remote only)*
 ## Complete workflow
 
 
-I wrote this script due to my constant need to migrate Wordpress sites. I required a workflow which would automate the process as much as possible, with minimal intervention. This script, therefore, plays one part in my overall Wordpress development workflow. Below is my set-up:
+I wrote this script due to my recurring need to migrate Wordpress sites. I required a workflow which would automate the process as much as possible, with minimal intervention. This script, therefore, plays one part in my overall Wordpress development workflow. Below is my set-up:
 
 ### Local
 
@@ -149,27 +147,27 @@ This workflow is based on the following model. Generally speaking, there are thr
 
  1. **"Code"**
 
-    + **Contains:** themes, scripts, plugins, config files etc...
-    + **Location:** FTP
-    + **Traditional GUI Management tool:** FTP program
-    + **Command-line Management tool:** `git`
++ **Contains:** themes, scripts, plugins, config files etc...
++ **Location:** FTP
++ **Traditional GUI Management tool:** FTP program
++ **Command-line Management tool:** `git`
 
 
  
  2. **"Media"**
 
-    + **Contains:** whatever is stored in your uploads directory: images, audio, video, docs etc...
-    + **Location:** FTP
-    + **Traditional GUI Management tool:** FTP program
-    + **Command-line Management tool:** `rsync`
++ **Contains:** whatever is stored in your uploads directory: images, audio, video, docs etc...
++ **Location:** FTP
++ **Traditional GUI Management tool:** FTP program
++ **Command-line Management tool:** `rsync`
 
 
  3. **"SQL data"**
 
-    + **Contains:** whatever is stored in your database: posts, pages, options, users, etc...
-    + **Location:** MySQL database
-    + **GUI Management tool:** PHPMyAdmin
-    + **Command-line Management tool:** `syncdb` (this script)
++ **Contains:** whatever is stored in your database: posts, pages, options, users, etc...
++ **Location:** MySQL database
++ **GUI Management tool:** PHPMyAdmin
++ **Command-line Management tool:** `syncdb` (this script)
 
 This script handles the migration of content categories 2) and 3). Part 1), the code, is managed in a Git repository on the remote server. Once this workflow has been enabled, the complete migration process looks like this:
 
