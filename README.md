@@ -146,28 +146,22 @@ I wrote this script due to my recurring need to migrate Wordpress sites. I requi
 This workflow is based on the following model. Generally speaking, there are three categories of content which make a database-driven website tick:
 
  1. **"Code"**
+    + **Contains:** themes, scripts, plugins, config files etc...
+    + **Location:** FTP
+    + **Traditional GUI Management tool:** FTP program
+    + **Command-line Management tool:** `git`
 
-+ **Contains:** themes, scripts, plugins, config files etc...
-+ **Location:** FTP
-+ **Traditional GUI Management tool:** FTP program
-+ **Command-line Management tool:** `git`
-
-
- 
  2. **"Media"**
-
-+ **Contains:** whatever is stored in your uploads directory: images, audio, video, docs etc...
-+ **Location:** FTP
-+ **Traditional GUI Management tool:** FTP program
-+ **Command-line Management tool:** `rsync`
-
+    + **Contains:** whatever is stored in your uploads directory: images, audio, video, docs etc...
+    + **Location:** FTP
+    + **Traditional GUI Management tool:** FTP program
+    + **Command-line Management tool:** `rsync`
 
  3. **"SQL data"**
-
-+ **Contains:** whatever is stored in your database: posts, pages, options, users, etc...
-+ **Location:** MySQL database
-+ **GUI Management tool:** PHPMyAdmin
-+ **Command-line Management tool:** `syncdb` (this script)
+    + **Contains:** whatever is stored in your database: posts, pages, options, users, etc...
+    + **Location:** MySQL database
+    + **GUI Management tool:** PHPMyAdmin
+    + **Command-line Management tool:** `syncdb` (this script)
 
 This script handles the migration of content categories 2) and 3). Part 1), the code, is managed in a Git repository on the remote server. Once this workflow has been enabled, the complete migration process looks like this:
 
