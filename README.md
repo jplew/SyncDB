@@ -1,5 +1,5 @@
-SyncDB v0.1
-==========
+SyncDB v0.2
+===========
 
 SyncDB is bash deploy script meant to take the tedium out of synchronizing local and remote versions of a Wordpress site. It allows developers working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes to or from their production server with a single terminal command. 
 
@@ -74,6 +74,9 @@ All commands are meant to be executed locally, unless noted with *(remote only)*
          + `search_replace_local()`
          + `rsync_pull()`
 
+   + help
+     + prints a list of all SyncDB commands.
+
    + test_ssh
      + Check if the SSH connection is working.
 
@@ -87,13 +90,13 @@ All commands are meant to be executed locally, unless noted with *(remote only)*
      + Upload a copy of SyncDB to your remote host's root directory.
 
    + do\_remote\_backup
-     + Login to the remote server via SSH and run `backup\_remote\_db()`, which will backup the remote MySQL database.
+     + Login to the remote server via SSH and run `backup_remote_db()`, which will backup the remote MySQL database.
 
    + backup\_remote\_db
      + *(remote only)* Backup the remote MySQL database to latest-remote.mssql.bz2 (or whatever you set $r\_db\_name to). Another backup dump is created with its name prepended by the current date and time. For example 20130902-1230-database.mssql.bz2.
 
    + do\_search\_replace\_remote
-     + Login to remote server and execute `search\_replace\_remote()`.
+     + Login to remote server and execute `search_replace_remote()`.
 
    + download\_remote\_db
      + Download the most recent remote database dump file via `scp`.
@@ -102,7 +105,7 @@ All commands are meant to be executed locally, unless noted with *(remote only)*
      + Drop then recreate the local database. This effectively deletes all the tables.
 
    + do\_remote\_operations
-     + Login to remote server and execute `replace\_remote\_db()` method.
+     + Login to remote server and execute `replace_remote_db()` method.
 
    + replace\_remote\_db
      + *(remote only)* Drop and recreate remote database. This effectively deletes all the tables.
@@ -178,6 +181,21 @@ This script handles the migration of content categories 2) and 3). Part 1), the 
 
 Easy!
 
+
+## Changelog
+
+v0.2 (Mar 16, 2014)
+----
+    + added `help` command for easy reference to commands
+    + in case an invalid argument is supplied on the command line, list of valid commands is output
+    + updated InterConnect IT's [Wordpress Search and Replace Tool](http://interconnectit.com/products/search-and-replace-for-wordpress-databases) to version 3.0.0 BETA
+    + fixed some bugs with test conditions
+    + changed shebang line to /bin/bash for Ubuntu compatibility
+    + big thanks to [@markchitty](https://github.com/markchitty) for the contribution and help
+
+v0.1 (Oct 2013)
+----
+original release
 
 ## Feedback & Bugs
 

@@ -2,7 +2,7 @@
 
 # ***********************************************
 #
-# syncDB v1.0
+# syncDB v0.2
 # by JP Lew (jplew.com)
 #
 # SyncDB is bash deploy script meant to take the tedium out of synchronizing
@@ -17,12 +17,13 @@
 #  SITE-SPECIFIC VARIABLES (mandatory for each site)
 # ===================================================
 
-r_user=rasamrita
-r_host=rasamritakunj.com
-r_web_dir=www/rasamritakunj.com/public_html
-r_port=
-r_web_addr=rasamritakunj.com
-l_web_addr=dev.rasamritakunj.com
+r_user=myusername
+r_host=ftp.mywebsite.com
+r_web_dir=public_html
+r_port= # usually left blank
+
+r_web_addr=mywebsite.com
+l_web_addr=dev.mywebsite.com
 
 # $r_user is your FTP username. It is used to ssh into your site: `ssh
 # $r_user@ftp.mywebsite.com`.
@@ -999,7 +1000,7 @@ echo
 declare -a list_of_methods=(help download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_operations do_search_replace_remote rsync_push do_login_backup upload_script test_ssh)
 
 echo $@
-if [ -n "$@" ]
+if [ -n "$1" ]
 then
 
     contains_element () {
