@@ -1,4 +1,4 @@
-#!/bin/sh -u
+#!/bin/bash -u
 
 # ***********************************************
 #
@@ -6,9 +6,9 @@
 # by JP Lew (jplew.com)
 #
 # SyncDB is bash deploy script meant to take the tedium out of synchronizing
-# local and remote versions of a Wordpress site. It allows developers
+# the local and remote versions of a Wordpress site. It allows developers
 # working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes
-# to or from their production server with a single terminal command. 
+# to or from the production server with a single command. 
 #
 # ***********************************************
 
@@ -17,13 +17,12 @@
 #  SITE-SPECIFIC VARIABLES (mandatory for each site)
 # ===================================================
 
-r_user=myusername
-r_host=ftp.mywebsite.com
-r_web_dir=public_html
-r_port= # usually left blank
-
-r_web_addr=mywebsite.com
-l_web_addr=dev.mywebsite.com
+r_user=rasamrita
+r_host=rasamritakunj.com
+r_web_dir=www/rasamritakunj.com/public_html
+r_port=
+r_web_addr=rasamritakunj.com
+l_web_addr=dev.rasamritakunj.com
 
 # $r_user is your FTP username. It is used to ssh into your site: `ssh
 # $r_user@ftp.mywebsite.com`.
@@ -31,42 +30,36 @@ l_web_addr=dev.mywebsite.com
 # $r_host is your FTP hostname. It is used to ssh into your site: `ssh
 # myusername@$r_host`.
 
+# $r_web_addr is the web address, or site URL of your site. It is used for the
+# search and replace.
+
 # $r_web_dir is the directory in which your remote site is located (usually
 # public_html, www, html etc...).
-#
+
 # $r_port is an optional field specifying the port number to use. In most cases
-# this can remain blank, although Host Gator for examples requires port 2222 to
+# this can remain blank, although Host Gator for examples requires port 22 to
 # connect via SSH.
-#
-# $r_web_addr is the web address, or site URL of your remote site. It is used for the
-# search and replace.
-#
-# $r_web_addr is the web address, or site URL of your local site. It is used
-# for the search and replace. If you're using name-based virtual hosts, it will
-# look like this: "dev.mywebsite.com" or "mywebsite.dev". If not, it could
-# look something like this: "localhost:8888/mysite".
+
+# $l_web_dir is the name of the folder in which your local site is kept. It knows this because this is where you moved SyncDB.
+l_site_dir=${PWD}
+l_web_dir=${PWD##*/}
 
 
 # ---------------------------------------------------------
 # Custom PHP CLI binary
+# Interconnect IT's Search and Replace CLI script requires a PHP-CLI
+# (command-line interface) version 5.3 or higher. You can determine the version
+# installed on your host by typing `php -v` from the command line. You can
+# identify its location by executing `type -a php`.  By default, the script
+# looks for the PHP cli at /usr/bin/php. However, many shared hosts either
+# store it in a non-standard location, or use older versions of PHP. In that
+# case, specify its location in $r_php. Here are some examples:
 #
-# If the search and replace step fails, it probably means you have to specify a
-# custom path to your PHP CLI. 
+# Host Gator
+#r_php=/usr/local/bin/php-5.3
 #
-# Interconnect IT's Search and Replace CLI script requires a PHP-CLI version
-# 5.3 or higher. Also, the shebang line looks for php at /usr/bin/php, which
-# may or may not exist on your server. To get more information about which
-# version of PHP your host defaults to and where it is located, try running
-# this command: `php -v; type -a php`.  
-#
-# Once you've identified the right location of your PHP binary,
-# set it here, like this for example:
-#
-#     Host Gator
-#     r_php=/usr/local/bin/php-5.3
-#
-#     GoDaddy
-#     r_php=/usr/local/php5_3/bin/php
+# GoDaddy
+#r_php=/usr/local/php5_3/bin/php
 # ---------------------------------------------------------
 
 r_php=
@@ -74,34 +67,37 @@ r_php=
 
 # ---------------------------------------------------------
 # `drop database` work-around
-# Some servers forbid the `drop database` command. Fortunately, there is an
-# alternate mysql command we can issue to drop all the tables in a database. By
-# setting $no_drop to "true", the script will invoke that command instead of
-# the standard `drop`. Leave blank for default behavior.
+# Some servers forbid the `drop database` command (Arvixe, I'm looking at you.
+# Fortunately, there is an alternate mysql command we can issue to drop all the
+# tables in a database. By setting $no_drop to "true", the script will invoke
+# that command instead of the standard `drop`. Leave blank for default
+# behavior.
 # ---------------------------------------------------------
 no_drop= # set to true if your host sucks
 
 
 # ==========================================================
-#  SYSTEM-WIDE VARIABLES (optional preferences set once per machine)
+#  SYSTEM-WIDE VARIABLES (preferences set once per machine)
 # ==========================================================
 
 
 # ---------------------------------------------------------
 # Custom mysql binaries (local)
 # If you want to use a non-default mysql and mysqldump binary (for example
-# MAMP's), you can specify it by setting $l_mysql and $l_mysqldump. MAMP users
-# set these like this:
-
+# MAMP's), you can specify it by setting $l_mysql and $l_mysqldump. Check your
+# server's default address like this: `type -a mysqldump`. with MAMP you'd
+# use:
     #l_mysql=/Applications/MAMP/Library/bin/mysql
     #l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
 
 # ---------------------------------------------------------
 
-l_mysql=
-l_mysqldump=
+#l_mysql=
+#l_mysqldump=
+l_mysql=/Applications/MAMP/Library/bin/mysql
+l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
 
-# $l_upload_dir and $r_upload_dir is where your site's 'uploads' folder is
+# $l_upload_dir and $r_upload_dir are where your site's 'uploads' folder are
 # located. This tells rsync which directories on your FTP should be
 # synchronized. If you're using WP-Skeleton
 # <http://markjaquith.wordpress.com/2012/05/26/wordpress-skeleton/>, all you
@@ -110,7 +106,7 @@ l_mysqldump=
 l_upload_dir=shared/
 r_upload_dir=shared/
 
-# This is the arbitrary name of your backups directory. It is located in your site's root directory. 
+# This is the arbitrary name and path to your backups folder. Located in your site's root directory. 
 l_bak_dir=.bak
 r_bak_dir=.bak
 
@@ -118,23 +114,19 @@ r_bak_dir=.bak
 l_bak_name2=latest-local.mssql 
 r_bak_name2=latest-remote.mssql
 
-# get the address of your local website based on the location of syncdb itself
-l_site_dir=${PWD}
-l_web_dir=${PWD##*/}
-
 # Path expansions. You will likely not have to touch these.
 l_bak_path2=$l_site_dir/$l_bak_dir/$l_bak_name2
 l_upload_path=$l_site_dir/$l_upload_dir
 r_upload_path=$r_web_dir/$r_upload_dir
 r_site_dir=$HOME/$r_web_dir
 
+
 # The --port flag has to be uppercase for `scp`, lowercase for `ssh`. sigh. 
-ssh_port_define="-p $r_port"
-scp_port_define="-P $r_port"
+ssh_port_define="-p $r_port "
+scp_port_define="-P $r_port "
 
 ssh_port=${r_port:+$ssh_port_define}
 scp_port=${r_port:+$scp_port_define}
-
 
 # ========================================
 #  GLOBAL CONSTANTS (no need to customize)
@@ -168,12 +160,13 @@ msgError='Error:'
 today=$(date +"%y%m%d")
 now=$(date +"%y%m%d-%H%M")
 
-# File names
-searchScriptName=searchreplacedb2.php
-cliScriptName=searchreplacedb2cli.php
+# Search-Replace-DB
+searchScriptName=srdb.class.php
+cliScriptName=srdb.cli.php
+srdbPath=https://raw.github.com/interconnectit/Search-Replace-DB/master/
+searchScriptPath=$srdbPath$searchScriptName
+cliScriptPath=$srdbPath$cliScriptName
 
-searchScriptPath=https://raw.github.com/interconnectit/Search-Replace-DB/master/searchreplacedb2.php
-cliScriptPath=https://raw.github.com/interconnectit/Search-Replace-DB/master/searchreplacedb2cli.php
 
 checked=
 
@@ -183,6 +176,47 @@ checked=
 # ====================================
 
 
+
+
+# ---------------------------------------------------------
+# help ()
+# Print list of valid SyncDB commands.
+# ---------------------------------------------------------
+help () {
+
+    echo
+    echo ${blue}SyncDB: List of Commands$reset
+    echo 
+
+    echo test_ssh
+
+    echo upload_local_db
+
+    echo do_remote_operations
+
+    echo do_search_replace_remote
+
+    echo search_replace_local
+
+    echo upload_script
+
+    echo do_login_backup
+
+    echo download_remote_db
+
+    echo backup_local_db
+
+    echo replace_local_db
+
+    echo rsync_push
+
+    echo rsync_pull
+
+    echo
+
+    exit 1
+}
+
 # ---------------------------------------------------------
 # test_ssh ()
 # Check if the SSH connection is working.
@@ -190,11 +224,11 @@ checked=
 test_ssh () {
     echo "${blue}Checking if SSH connection is working...$reset"
     echo
-    echo "ssh -q $ssh_port $r_user@$r_host exit"
+    echo "ssh -q $ssh_port$r_user@$r_host exit"
 
-    ssh -q $ssh_port $r_user@$r_host exit
+    ssh -q $ssh_port$r_user@$r_host exit
 
-    if [ $? == 1 ] # check if the SSH connection is working
+    if [ $? == 0 ] # check if the SSH connection is working
     then
         echo
         echo "${green}${msgSuccess}$reset SSH connection is working."
@@ -312,7 +346,7 @@ get_remote_db_details () {
 
 # ---------------------------------------------------------
 # backup_remote_db ()
-# Back up the remote MySQL database to latest-remote.mssql.bz2 (or whatever you set $r_db_name to). Another backup dump is created with its name prepended by the current date and time. For example 20130902-1230-database.mssql.bz2.
+# Dump the remote database and back it up
 # ---------------------------------------------------------
 backup_remote_db () {
 
@@ -382,8 +416,7 @@ download_remote_db () {
 
 # ---------------------------------------------------------
 # backup_local_db ()
-# Makes a backup of your local MySQL database. The dump's filename is prepended
-# by the current date and time. For example 20130902-1230-database.mssql.bz2.
+# Back up the local database.
 # ---------------------------------------------------------
 backup_local_db () {
 
@@ -486,7 +519,7 @@ do_check_for_dirs () {
 
     echo "Checking for existence of remote directories..."
 
-    ssh -q "$ssh_port" "$r_user"@"$r_host" "if [[ ! -d "$r_web_dir" ]]; then echo "Directory does not exist: $r_web_dir"; exit 1; fi; cd "$r_web_dir"; if [[ ! -d "$r_bak_dir" ]]; then mkdir "$r_bak_dir"; fi;" 
+    ssh -q "$ssh_port""$r_user"@"$r_host" "if [[ ! -d "$r_web_dir" ]]; then echo "Directory does not exist: $r_web_dir"; exit 1; fi; cd "$r_web_dir"; if [[ ! -d "$r_bak_dir" ]]; then mkdir "$r_bak_dir"; fi;" 
 
     checked=true
 }
@@ -506,7 +539,7 @@ upload_script () {
     [[ "$checked" ]] || do_check_for_dirs
 
     # Compare the local version of SyncDB with the remote version. If there's a difference, upload and write over the remote one.
-    difference=$(ssh $ssh_port $r_user@$r_host cat $r_web_dir/$r_bak_dir/$(basename $0) 2>/dev/null | diff ./$(basename $0) - )
+    difference=$(ssh $ssh_port$r_user@$r_host cat $r_web_dir/$r_bak_dir/$(basename $0) 2>/dev/null | diff ./$(basename $0) - )
 
     echo
     if [[ "$difference" ]]
@@ -527,21 +560,22 @@ upload_script () {
 
 
 # ---------------------------------------------------------
-# do_remote_backup ()
+# do_login_backup ()
 # Login to the remote server via SSH and call backup_remote_db(). Meant to be
 # run locally.
 # ---------------------------------------------------------
-do_remote_backup () {
+do_login_backup () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
-    ssh $ssh_port $r_user@$r_host "cd $r_web_dir; ./$(basename $0) backup_remote_db;"
+    echo "ssh -t $ssh_port$r_user@$r_host cd $r_web_dir; ./$(basename $0) backup_remote_db;"
+    ssh -t $ssh_port$r_user@$r_host "cd $r_web_dir; ./$(basename $0) backup_remote_db;"
 
 }
 
 # ---------------------------------------------------------
 # upload_local_db ()
-# Upload the most recent local database dumpfile to the remote server.
+# Upload local scripts and database backup file to the remote server
 # ---------------------------------------------------------
 upload_local_db () {
 
@@ -551,7 +585,7 @@ upload_local_db () {
     # check if we've already checked the remote path structure. If not, check now
     [[ "$checked" ]] || do_check_for_dirs
 
-    ssh $ssh_port $r_user@$r_host "if [[ ! -d $r_web_dir ]]; then echo "Directory does not exist: $r_web_dir"; exit 1; fi; cd $r_web_dir; if [[ ! -d $r_bak_dir ]]; then mkdir $r_bak_dir; fi;" 
+    ssh $ssh_port$r_user@$r_host "if [[ ! -d $r_web_dir ]]; then echo "Directory does not exist: $r_web_dir"; exit 1; fi; cd $r_web_dir; if [[ ! -d $r_bak_dir ]]; then mkdir $r_bak_dir; fi;" 
 
     cd $l_site_dir/$l_bak_dir
 
@@ -564,7 +598,9 @@ upload_local_db () {
         exit 1
     fi
 
-    if ssh -q "$ssh_port" "$r_user"@"$r_host" [[ -f $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2 ]]
+    echo
+    echo "if ssh $ssh_port$r_user@$r_host test -e $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2" 
+    if ssh "$ssh_port""$r_user"@"$r_host" test -e "$r_web_dir"/"$r_bak_dir"/${l_bak_name2}.bz2 
     then
         echo
         echo "$green$msgSuccess$reset Dump file uploaded to: $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2"
@@ -746,7 +782,7 @@ install_search_scripts () {
 
 
 # ---------------------------------------------------------
-# search_replace_local ()
+# search_replace_remote ()
 # Install the Search and Replace Tools locally then execute them.
 # ---------------------------------------------------------
 search_replace_local () {
@@ -779,9 +815,10 @@ search_replace_local () {
 
     cd $l_bak_dir
 
-    echo "./$cliScriptName -h "$l_db_host" -u $l_db_user -d $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
+    echo "./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
 
-    ./$cliScriptName -h "$l_db_host" -u $l_db_user -d $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" 
+    ./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" 
+
 
 }
 
@@ -792,7 +829,7 @@ search_replace_local () {
 do_search_replace_remote () {
     [[ "$checked" ]] || do_check_for_dirs
 
-    ssh $ssh_port $r_user@$r_host "cd $r_web_dir; ./$(basename $0) search_replace_remote;"
+    ssh $ssh_port$r_user@$r_host "cd $r_web_dir; ./$(basename $0) search_replace_remote;"
 }
 
 # ---------------------------------------------------------
@@ -833,9 +870,9 @@ search_replace_remote () {
 
     echo
 
-    echo "./$cliScriptName -h $r_db_host -u $r_db_user -d $r_db_name -p $r_db_pass -c utf\-8 -s $l_web_addr -r $r_web_addr"
+    echo "./$cliScriptName -h $r_db_host -u $r_db_user -n $r_db_name -p $r_db_pass -c utf\-8 -s $l_web_addr -r $r_web_addr"
 
-    ./$cliScriptName -h "$r_db_host" -u "$r_db_user" -d "$r_db_name" -p "$r_db_pass" -c utf\-8 -s "$l_web_addr" -r "$r_web_addr"
+    ./$cliScriptName -h "$r_db_host" -u "$r_db_user" -n "$r_db_name" -p "$r_db_pass" -c utf\-8 -s "$l_web_addr" -r "$r_web_addr"
 
     if [[ $? != 0 ]]; then
         echo "$red$msgError$reset Failed to search and replace remote database."
@@ -856,7 +893,7 @@ do_remote_operations () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
-    ssh $ssh_port $r_user@$r_host "cd $r_web_dir; ./$(basename $0) replace_remote_db;"
+    ssh $ssh_port$r_user@$r_host "cd $r_web_dir; ./$(basename $0) replace_remote_db;"
 
 }
 
@@ -868,7 +905,7 @@ do_remote_operations () {
 # ---------------------------------------------------------
 rsync_push () {
     echo "rsync -rave "ssh -l $r_user" $l_upload_path $r_host:$r_upload_path"
-    rsync -rave "ssh $ssh_port -l $r_user" "$l_upload_path" "$r_host":"$r_upload_path"
+    rsync -rave "ssh $ssh_port-l $r_user" "$l_upload_path" "$r_host":"$r_upload_path"
 } 
 
 # ---------------------------------------------------------
@@ -878,7 +915,7 @@ rsync_push () {
 # ---------------------------------------------------------
 rsync_pull () {
     echo "rsync -rave "ssh -l $r_user" "$r_host":"$r_upload_path" "$l_upload_path""
-    rsync -rave "ssh $ssh_port -l $r_user" "$r_host":"$r_upload_path" "$l_upload_path"
+    rsync -rave "ssh $ssh_port-l $r_user" "$r_host":"$r_upload_path" "$l_upload_path"
 } 
 
 # ---------------------------------------------------------
@@ -911,7 +948,7 @@ push () {
 
     upload_script
 
-    do_remote_backup
+    do_login_backup
 
     do_remote_operations
 
@@ -935,7 +972,7 @@ pull () {
 
     upload_script
 
-    do_remote_backup
+    do_login_backup
 
     download_remote_db
 
@@ -958,6 +995,30 @@ pull () {
 echo
 echo "${blue}SyncDB v1.0$reset > $yellow${@:-push}$reset"
 echo
+
+declare -a list_of_methods=(help download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_operations do_search_replace_remote rsync_push do_login_backup upload_script test_ssh)
+
+echo $@
+if [ -n "$@" ]
+then
+
+    contains_element () {
+      local e
+      for e in "${list_of_methods[@]}"; do [[ "$e" == "${1:-push}" ]] && return 0; done
+      return 1
+    }
+
+    contains_element "$@"
+
+    if [[ $? -eq 1 ]]
+    then 
+        echo ${red}Error:$reset Command not found: ${yellow}"$@"$reset
+
+        help
+    fi
+
+fi
+
 
 
 # script will execute whichever method is passed to it as an argument.
