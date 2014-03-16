@@ -130,7 +130,7 @@ I wrote this script due to my recurring need to migrate Wordpress sites. I requi
 
 ### Local
 
- * Mac OS X 10.8.4 running [MAMP](<http://www.mamp.info>) *[optional]*
+ * Mac OS X Mavericks running [MAMP](<http://www.mamp.info>) *[optional]*
  * Name-based virtual hosting enabled (eg. http://dev.mywebsite.com as opposed to localhost/mywebsite) *[recommended]*
 
 ### Remote
@@ -151,13 +151,13 @@ This workflow is based on the following model. Generally speaking, there are thr
  1. **"Code"**
     + **Contains:** themes, scripts, plugins, config files etc...
     + **Location:** FTP
-    + **Traditional GUI Management tool:** FTP program
+    + **GUI Management tool:** FTP program
     + **Command-line Management tool:** `git`
 
  2. **"Media"**
     + **Contains:** whatever is stored in your uploads directory: images, audio, video, docs etc...
     + **Location:** FTP
-    + **Traditional GUI Management tool:** FTP program
+    + **GUI Management tool:** FTP program
     + **Command-line Management tool:** `rsync`
 
  3. **"SQL data"**
@@ -186,16 +186,16 @@ Easy!
 
 v0.2 (Mar 16, 2014)
 ----
-    + added `help` command for easy reference to commands
-    + in case an invalid argument is supplied on the command line, list of valid commands is output
-    + updated InterConnect IT's [Wordpress Search and Replace Tool](http://interconnectit.com/products/search-and-replace-for-wordpress-databases) to version 3.0.0 BETA
-    + fixed some bugs with test conditions
-    + changed shebang line to /bin/bash for Ubuntu compatibility
-    + big thanks to [@markchitty](https://github.com/markchitty) for the contribution and help
+ * added `help` command for easy reference to commands
+ * in case an invalid argument is supplied on the command line, list of valid commands is output
+ * updated InterConnect IT's [Wordpress Search and Replace Tool](http://interconnectit.com/products/search-and-replace-for-wordpress-databases) to version 3.0.0 BETA
+ * fixed some bugs with test conditions
+ * changed shebang line to /bin/bash for Ubuntu compatibility
+ * big thanks to [@markchitty](https://github.com/markchitty) for the contribution and help
 
 v0.1 (Oct 2013)
 ----
-original release
+o * riginal release
 
 ## Feedback & Bugs
 
