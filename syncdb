@@ -989,20 +989,23 @@ pull () {
 
 }
 
+
 # ====================================
-#  COMMANDS
+#  ACTUAL SCRIPT EXECUTION
 # ====================================
 
 echo
 echo "${blue}SyncDB v1.0$reset > $yellow${@:-push}$reset"
 echo
 
-declare -a list_of_methods=(help download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_operations do_search_replace_remote rsync_push do_login_backup upload_script test_ssh)
-
-echo $@
-if [ -n "$1" ]
+# if an argument is passed (the number of arguments is not equal to zero), then check if that command is valid.
+if [ $# -ne 0 ]
 then
 
+    # place all the command names in an array
+    declare -a list_of_methods=(help download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_operations do_search_replace_remote rsync_push do_login_backup upload_script test_ssh)
+
+    # function to check if an item exists in an array
     contains_element () {
       local e
       for e in "${list_of_methods[@]}"; do [[ "$e" == "${1:-push}" ]] && return 0; done
@@ -1011,13 +1014,13 @@ then
 
     contains_element "$@"
 
+    # if command is invalid, list the valid ones
     if [[ $? -eq 1 ]]
     then 
         echo ${red}Error:$reset Command not found: ${yellow}"$@"$reset
 
         help
     fi
-
 fi
 
 
