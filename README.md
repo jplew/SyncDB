@@ -191,11 +191,11 @@ v0.2 (Mar 16, 2014)
  * updated InterConnect IT's [Wordpress Search and Replace Tool](http://interconnectit.com/products/search-and-replace-for-wordpress-databases) to version 3.0.0 BETA
  * fixed some bugs with test conditions
  * changed shebang line to /bin/bash for Ubuntu compatibility
- * big thanks to [@markchitty](https://github.com/markchitty) for the contribution and help
+ * big thanks to [@markchitty](https://github.com/markchitty) and @joshuaiz for the contribution and help
 
 v0.1 (Oct 2013)
 ----
-o * riginal release
+ * original release
 
 ## Feedback & Bugs
 
