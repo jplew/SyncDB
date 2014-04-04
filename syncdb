@@ -2,7 +2,7 @@
 
 # ***********************************************
 #
-# syncDB v0.2
+# syncDB v0.2.1
 # by JP Lew (jplew.com)
 #
 # SyncDB is bash deploy script meant to take the tedium out of synchronizing
@@ -792,7 +792,7 @@ search_replace_local () {
 
     cd $l_bak_dir
 
-    echo "./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
+    echo "./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p [password hidden for security] -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
 
     ./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" 
 
@@ -845,7 +845,7 @@ search_replace_remote () {
 
     echo
 
-    echo "./$cliScriptName -h $r_db_host -u $r_db_user -n $r_db_name -p $r_db_pass -c utf\-8 -s $l_web_addr -r $r_web_addr"
+    echo "./$cliScriptName -h $r_db_host -u $r_db_user -n $r_db_name -p [password hidden for security] -c utf\-8 -s $l_web_addr -r $r_web_addr"
 
     ./$cliScriptName -h "$r_db_host" -u "$r_db_user" -n "$r_db_name" -p "$r_db_pass" -c utf\-8 -s "$l_web_addr" -r "$r_web_addr"
 
@@ -969,7 +969,7 @@ pull () {
 # ====================================
 
 echo
-echo "${blue}SyncDB v1.0$reset > $yellow${@:-push}$reset"
+echo "${blue}SyncDB v0.2.1$reset > $yellow${@:-push}$reset"
 echo
 
 # if an argument is passed (the number of arguments is not equal to zero), then check if that command is valid.
