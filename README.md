@@ -1,4 +1,4 @@
-SyncDB v0.2
+SyncDB v0.2.1
 ===========
 
 SyncDB is bash deploy script meant to take the tedium out of synchronizing local and remote versions of a Wordpress site. It allows developers working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes to or from their production server with a single terminal command. 
@@ -183,6 +183,13 @@ Easy!
 
 
 ## Changelog
+
+v0.21 (Apr 4, 2014)
+----
+ * fixed bug which would cause the search and replace to fail if server's PHP binary was located anywhere besides /usr/bin/php
+ * added PHP auto-detection. No need to manually input your server's php-cli path any more.
+ * SQL password now hidden when outputting to terminal, for security purposes
+ * thanks to [@joshuaiz](https://github.com/joshuaiz) for the help
 
 v0.2 (Mar 16, 2014)
 ----
