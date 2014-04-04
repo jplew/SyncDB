@@ -34,6 +34,8 @@ l_web_addr=dev.mywebsite.com
 # $r_web_addr is the web address, or site URL of your site. It is used for the
 # search and replace.
 
+# $l_web_addr is whatever you set your local server name to. Something like localhost:8888 or dev.mywebsite.com or mywebsite.dev
+
 # $r_web_dir is the directory in which your remote site is located (usually
 # public_html, www, html etc...).
 
@@ -44,27 +46,6 @@ l_web_addr=dev.mywebsite.com
 # $l_web_dir is the name of the folder in which your local site is kept. It knows this because this is where you moved SyncDB.
 l_site_dir=${PWD}
 l_web_dir=${PWD##*/}
-
-
-# ---------------------------------------------------------
-# Custom PHP CLI binary
-# Interconnect IT's Search and Replace CLI script requires a PHP-CLI
-# (command-line interface) version 5.3 or higher. You can determine the version
-# installed on your host by typing `php -v` from the command line. You can
-# identify its location by executing `type -a php`.  By default, the script
-# looks for the PHP cli at /usr/bin/php. However, many shared hosts either
-# store it in a non-standard location, or use older versions of PHP. In that
-# case, specify its location in $r_php. Here are some examples:
-#
-# Host Gator
-#r_php=/usr/local/bin/php-5.3
-#
-# GoDaddy
-#r_php=/usr/local/php5_3/bin/php
-# ---------------------------------------------------------
-
-r_php=
-
 
 # ---------------------------------------------------------
 # `drop database` work-around
@@ -175,9 +156,6 @@ checked=
 # ====================================
 #  FUNCTIONS
 # ====================================
-
-
-
 
 # ---------------------------------------------------------
 # help ()
@@ -398,11 +376,11 @@ download_remote_db () {
 
     cd $l_bak_dir
 
-    echo "scp $scp_port $r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 ."
+    echo "scp $scp_port$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 ."
 
     set -o pipefail
 
-    scp "$scp_port" $r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
+    scp "$scp_port"$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
 
     if [ $? == 0 -a -f ${r_bak_name2}.bz2 ]; then
         echo
@@ -412,8 +390,6 @@ download_remote_db () {
         exit 1
     fi
 }
-
-
 
 # ---------------------------------------------------------
 # backup_local_db ()
@@ -545,9 +521,9 @@ upload_script () {
     echo
     if [[ "$difference" ]]
     then
-        echo "scp $scp_port ./$(basename $0) $r_user@$r_host:~/$r_web_dir/"
+        echo "scp $scp_port./$(basename $0) $r_user@$r_host:~/$r_web_dir/"
         echo
-        scp "$scp_port" ./$(basename $0) $r_user@$r_host:~/$r_web_dir/
+        scp "$scp_port"./$(basename $0) $r_user@$r_host:~/$r_web_dir/
         echo
         echo "$green$msgSuccess$reset SyncDB script uploaded to: $r_web_dir/$(basename $0) (your local version was more recent)."
     else
@@ -592,8 +568,8 @@ upload_local_db () {
 
     if [[ -f "${l_bak_path2}.bz2" ]]
     then
-        echo "scp $scp_port ${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir"
-        scp $scp_port ${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir
+        echo "scp $scp_port${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir"
+        scp "$scp_port"${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir
     else
         echo "$red$msgError$reset Could not locate the local dump file at $(pwd)/${l_bak_name2}.bz2."
         exit 1
@@ -851,22 +827,20 @@ search_replace_remote () {
 
     old_shebang=$(sed -n 1p "${cliScriptName}")
 
-    if [[ ! -f "/usr/bin/php" ]] 
-    then
-        echo "$red$msgError$reset could not find /usr/bin/php. Locate your server's version of the php command line interface (php-cli) and assign it to the variable \$r_php."
-        exit 1; 
-    else
-        echo "/usr/bin/php exists."
-    fi
+    my_php=$(which php)
+    default_php=/usr/bin/php
 
     # replace the shebang line with custom php binary
-    if [[ "$r_php" ]]
+    if [[ "$my_php" != "$default_php" ]]
     then
 
-        sed -i "1c #!${r_php} -q" $cliScriptName
+        echo "${yellow}PHP Binary:$reset Your server uses $my_php"
+        sed -i "1c #!${my_php} -q" $cliScriptName
 
-        echo "Shebang line changed from ${yellow}${old_shebang}$reset to $yellow#!${r_php} -q$reset"
+        echo "Shebang line changed from ${yellow}${old_shebang}$reset to $yellow#!${my_php} -q$reset"
         echo
+    else
+        echo "${yellow}PHP Binary:$reset Your server uses the default $default_php"
     fi
 
     echo
@@ -1021,6 +995,7 @@ then
 
         help
     fi
+
 fi
 
 
