@@ -1,4 +1,4 @@
-SyncDB v0.2.1
+SyncDB v0.2.2
 ===========
 
 SyncDB is bash deploy script meant to take the tedium out of synchronizing local and remote versions of a Wordpress site. It allows developers working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes to or from their production server with a single terminal command. 
