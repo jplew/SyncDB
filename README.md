@@ -173,7 +173,6 @@ This script handles the migration of content categories 2) and 3). Part 1), the 
      ./syncdb
      git push hub master
  
- 
  **Pulling**:
  
      ./syncdb pull
@@ -183,6 +182,11 @@ Easy!
 
 
 ## Changelog
+
+v0.22 (May 2, 2014)
+----
+ * fixed in-script documentation (added trailing slash to wp-content/uploads/). thanks to [@Yeow-Meng](https://github.com/Yeow-Meng)
+ * made wp-content/uploads/ the default uploads path (since this seems to be the most common usage)
 
 v0.21 (Apr 4, 2014)
 ----

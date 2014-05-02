@@ -31,11 +31,6 @@ l_web_addr=dev.mywebsite.com
 # $r_host is your FTP hostname. It is used to ssh into your site: `ssh
 # myusername@$r_host`.
 
-# $r_web_addr is the web address, or site URL of your site. It is used for the
-# search and replace.
-
-# $l_web_addr is whatever you set your local server name to. Something like localhost:8888 or dev.mywebsite.com or mywebsite.dev
-
 # $r_web_dir is the directory in which your remote site is located (usually
 # public_html, www, html etc...).
 
@@ -43,13 +38,19 @@ l_web_addr=dev.mywebsite.com
 # this can remain blank, although Host Gator for examples requires port 22 to
 # connect via SSH.
 
-# $l_web_dir is the name of the folder in which your local site is kept. It knows this because this is where you moved SyncDB.
+# $r_web_addr is the web address, or site URL of your site. It is used for the
+# search and replace.
+
+# $l_web_addr is whatever you set your local server name to. Something like localhost:8888 or dev.mywebsite.com or mywebsite.dev
+
+# $l_site_dir is the full path to your site. It knows this because this is where you moved SyncDB.
 l_site_dir=${PWD}
+# $l_web_dir is the name of your site's root directory (same as $l_site_dir, but with the preceding folder path stripped off).
 l_web_dir=${PWD##*/}
 
 # ---------------------------------------------------------
 # `drop database` work-around
-# Some servers forbid the `drop database` command (Arvixe, I'm looking at you.
+# Some servers forbid the `drop database` command (Arvixe, I'm looking at you.)
 # Fortunately, there is an alternate mysql command we can issue to drop all the
 # tables in a database. By setting $no_drop to "true", the script will invoke
 # that command instead of the standard `drop`. Leave blank for default
@@ -61,7 +62,6 @@ no_drop= # set to true if your host sucks
 # ==========================================================
 #  SYSTEM-WIDE VARIABLES (preferences set once per machine)
 # ==========================================================
-
 
 # ---------------------------------------------------------
 # Custom mysql binaries (local)
@@ -79,14 +79,14 @@ no_drop= # set to true if your host sucks
 l_mysql=/Applications/MAMP/Library/bin/mysql
 l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
 
-# $l_upload_dir and $r_upload_dir are where your site's 'uploads' folder are
+# $l_upload_dir and $r_upload_dir are where your site's 'uploads' folder is
 # located. This tells rsync which directories on your FTP should be
 # synchronized. If you're using WP-Skeleton
 # <http://markjaquith.wordpress.com/2012/05/26/wordpress-skeleton/>, all you
-# have to synchronize is your shared folder (content/uploads is symlinked to
-# shared/content/uploads). Otherwise, it's probably wp-content/uploads.
-l_upload_dir=shared/
-r_upload_dir=shared/
+# have to synchronize is your shared/ folder (content/uploads/ is symlinked to
+# shared/content/uploads/). Otherwise, it's probably wp-content/uploads/.
+l_upload_dir=wp-content/uploads/
+r_upload_dir=wp-content/uploads/
 
 # This is the arbitrary name and path to your backups folder. Located in your site's root directory. 
 l_bak_dir=.bak
@@ -101,7 +101,6 @@ l_bak_path2=$l_site_dir/$l_bak_dir/$l_bak_name2
 l_upload_path=$l_site_dir/$l_upload_dir
 r_upload_path=$r_web_dir/$r_upload_dir
 r_site_dir=$HOME/$r_web_dir
-
 
 # The --port flag has to be uppercase for `scp`, lowercase for `ssh`. sigh. 
 ssh_port_define="-p $r_port "
@@ -138,7 +137,7 @@ fi
 msgSuccess='Success:'
 msgError='Error:'
     
-# Date placeholders
+# Date placeholders (for naming the SQL dump files)
 today=$(date +"%y%m%d")
 now=$(date +"%y%m%d-%H%M")
 
@@ -150,6 +149,7 @@ searchScriptPath=$srdbPath$searchScriptName
 cliScriptPath=$srdbPath$cliScriptName
 
 
+# initialize variable. Used because we only need to test the SSH connection once.
 checked=
 
 
@@ -163,37 +163,27 @@ checked=
 # ---------------------------------------------------------
 help () {
 
-    echo
-    echo ${blue}SyncDB: List of Commands$reset
-    echo 
+cat <<EOF
+    ${blue}SyncDB List of Commands$reset
 
-    echo test_ssh
+    • backup_local_db
+    • do_login_backup
+    • do_remote_operations
+    • do_search_replace_remote
+    • download_remote_db
+    • push
+    • pull
+    • replace_local_db
+    • rsync_pull
+    • rsync_push
+    • search_replace_local
+    • test_ssh
+    • upload_local_db
+    • upload_script
 
-    echo upload_local_db
+EOF
 
-    echo do_remote_operations
-
-    echo do_search_replace_remote
-
-    echo search_replace_local
-
-    echo upload_script
-
-    echo do_login_backup
-
-    echo download_remote_db
-
-    echo backup_local_db
-
-    echo replace_local_db
-
-    echo rsync_push
-
-    echo rsync_pull
-
-    echo
-
-    exit 1
+    exit 0
 }
 
 # ---------------------------------------------------------
@@ -572,6 +562,7 @@ upload_local_db () {
         scp "$scp_port"${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir
     else
         echo "$red$msgError$reset Could not locate the local dump file at $(pwd)/${l_bak_name2}.bz2."
+        echo
         exit 1
     fi
 
@@ -969,20 +960,21 @@ pull () {
 # ====================================
 
 echo
-echo "${blue}SyncDB v0.2.1$reset > $yellow${@:-push}$reset"
+echo "${blue}SyncDB v0.2.2$reset > $yellow${@:-push}$reset"
 echo
 
-# if an argument is passed (the number of arguments is not equal to zero), then check if that command is valid.
+# if an argument is passed (the number of arguments is not equal to zero), then check if that command is valid or not.
 if [ $# -ne 0 ]
 then
-
     # place all the command names in an array
     declare -a list_of_methods=(help download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_operations do_search_replace_remote rsync_push do_login_backup upload_script test_ssh)
 
     # function to check if an item exists in an array
     contains_element () {
       local e
-      for e in "${list_of_methods[@]}"; do [[ "$e" == "${1:-push}" ]] && return 0; done
+      for e in "${list_of_methods[@]}"
+          do [[ "$e" == "${1:-push}" ]] && return 0
+      done
       return 1
     }
 
@@ -992,17 +984,15 @@ then
     if [[ $? -eq 1 ]]
     then 
         echo ${red}Error:$reset Command not found: ${yellow}"$@"$reset
+        echo
 
         help
     fi
 
 fi
 
-
-
 # script will execute whichever method is passed to it as an argument.
 # The default is to run the `push` method.
 ${@:-push}
 
 
-exit 
