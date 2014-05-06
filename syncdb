@@ -63,26 +63,9 @@ no_drop= # set to true if your host sucks
     # ---------------------------------------------------------
 
 
-#l_db_name= # automatically detected for most set-ups (see note below)
-#l_db_user= # automatically detected for most set-ups (see note below)
-#l_db_pass= # automatically detected for most set-ups (see note below)
-#l_db_host= # automatically detected for most set-ups (see note below)
-
-#r_db_name= # automatically detected for most set-ups (see note below)
-#r_db_user= # automatically detected for most set-ups (see note below)
-#r_db_pass= # automatically detected for most set-ups (see note below)
-#r_db_host= # automatically detected for most set-ups (see note below)
-
     # ---------------------------------------------------------
     # non-standard wp-config
-    # Some wp-config files have multiple sets of configurations variables, one
-    # for each environment (local, dev, production/live etc...). This script is
-    # not designed to handle that, it can only deal with one
-    # set at a time. If you use such a non-standard wp-config.php, you must
-    # specify which pair of environments you want to synchronize by setting
-    # those variables here.
     # ---------------------------------------------------------
-
 
 
 # ==========================================================
@@ -269,33 +252,22 @@ get_local_db_details () {
         exit 1
     fi
 
-    grep_output=$(grep -c "'DB_USER', '[^']*'.*" $local_config_file)
+    #This tells us how many times DB_USER has been set in the config file.
+    number_of_environments=$(grep -c "'DB_USER', '[^']*'.*" $local_config_file)
 
-    number_of_environments=$(echo $grep_output | sed -e 's/.*://')
+    #grep returns "filename.php:4" if there's 4 hits. We want to strip away
+    #everything up to the colon and just save the number
+    number_of_environments=$(echo $number_of_environments | sed -e 's/.*://')
+    echo
 
-
-
-    #grep the config file for the MySQL login details
-    l_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
-
-    #echo
-    #printf "============================================================\n" 
-    #printf " LOCAL DATABASE DETAILS\n" 
-    #printf "============================================================\n" 
-    #echo
-
-    #echo "local DB_USER is:       $yellow$l_db_user$reset"
-    #echo "local DB_NAME is:       $yellow$l_db_name$reset"
-    #echo "local DB_PASSWORD is:   $yellow$l_db_pass$reset"
-    #echo "local DB_HOST is:       $yellow$l_db_host$reset"
-
-    #echo
-
-    #echo "$green$msgSuccess$reset Local database details returned."
-
+    #This detects if there's anything weird going on in the config file. If there
+    #are more than one instances of DB_USER, that's weird.
+    if [ $number_of_environments == 1 ]
+    then
+        return_local_standard();
+    else
+        return_nonstandard local
+    fi
 
     #Local paths
     l_bak_name1=$now-$l_db_name.mssql
@@ -304,6 +276,206 @@ get_local_db_details () {
     echo
 
 }
+
+
+# ---------------------------------------------------------
+# return_nonstandard ()
+# Some wp-config files have multiple sets of configuration variables, one
+# for each environment (local, dev, production/live etc...). 
+# This function collects all the login info it can find, organizes it into
+# sets, auto-detects which one is the local set, and if necessary asks the user
+# which remote server they want to sync with. 
+# This function accepts a parameter, either 'local' or
+# 'remote'. 
+# ---------------------------------------------------------
+return_nonstandard () {
+
+    echo "SyncDB has detected multiple remote environment configurations in your $local_config_file."
+
+    #read the argument passed to the function. If the argument was omitted,
+    #default to local
+    parameter=${1:-local}
+
+    #grep the config file for all relevants hits, and saves them to their
+    #respective category. All hits are delimited by spaces.
+    l_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
+
+    #This splits the previous values into arrays
+    name_array=(${l_db_name// / })
+    user_array=(${l_db_user// / })
+    pass_array=(${l_db_pass// / })
+    host_array=(${l_db_host// / })
+
+    #Checking if DB_HOST was empty for any environments. This means it
+    #wasn't hard-coded, and is using _ENV{DATABASE-SERVER} instead. Rather than
+    #leave it blank, we want to assign it the value "unset"
+    for (( i = 0 ; i < $number_of_environments ; i++ )) 
+    do
+
+        if [ ! -n "${host_array[$i]-}" ]
+        then
+            PHP_OUT=`php -r 'echo $_ENV{DATABASE_SERVER};'`
+            if [[ $PHP_OUT ]] 
+            then
+                host_array[$i]=$PHP_OUT
+            else
+                host_array[$i]="unset"
+            fi
+        fi
+
+    done
+
+    #env_array will be the final list of remote environments
+    declare -a env_array=()
+
+    #for each environment detected, let's test if it's local by checking if
+    #anything is set to "root". We're assuming no-one's using "root" as their remote
+    #login or password.
+    for (( i = 0 ; i < $number_of_environments ; i++ )) 
+    do
+
+        #add the current environment to the array
+        env_array[$i]=$i
+
+        #this will create array set_0, set_1, set_2 etc... which will reorganize all the grepped values into their respective environment
+        eval "declare -a "set_${i}"=( ${name_array[$i]} ${user_array[$i]} ${pass_array[$i]} ${host_array[$i]} )"
+
+        #because we're using arrays we have to use some indirect referencing trickery to iterate properly
+        _set="set_$i"[@]
+        set=( "${!_set}" )
+
+        #k is a separate counter to iterate through the four environment variables
+        k=0
+        for j in "${set[@]}"
+        do
+            #out of all the environments, let's set the default to 0
+            local_env=0
+            if [ $j == "root" ] 
+            then
+                #hopefully only one of the environments is using root as a login
+                local_env=$i
+            fi
+
+            #remove the local environment from the final array, so the user doesn't
+            #have to consider it.
+            unset env_array[$local_env]
+
+            if [ "$i" -ne "$local_env" ]
+            then
+
+                #Display the title, "Environment #x", only once, on the first
+                #pass through the current environment's config values
+                [[ $k == 0 ]] && echo "    ENVIRONMENT #$i" 
+                header=
+                case $k in
+                    0 )
+                        header="DB_NAME" ;;
+                    1 )
+                        header="DB_USER" ;;
+                    2 )
+                        header="DB_PASS" ;;
+                    3 )
+                        header="DB_HOST" ;;
+                esac
+                echo "    $header:      $j"
+
+                ((k++))
+            fi
+
+        done
+        echo
+
+    done
+
+    #Now that we've figured out which environment is the local one, let's set all
+    #the variables to use for the local mysql operations
+    local_env_ref_0=set_$local_env[0]
+    local_env_ref_1=set_$local_env[1]
+    local_env_ref_2=set_$local_env[2]
+    local_env_ref_3=set_$local_env[3]
+
+    l_db_name=${!local_env_ref_0}
+    l_db_user=${!local_env_ref_1}
+    l_db_pass=${!local_env_ref_2}
+    l_db_host=${!local_env_ref_3}
+
+    #echo
+    #echo "============================================================" 
+    #echo " LOCAL DATABASE DETAILS" 
+    #echo "============================================================" 
+    #echo
+
+    #echo "local DB_USER is:       $l_db_user"
+    #echo "local DB_NAME is:       $l_db_name"
+    #echo "local DB_PASSWORD is:   $l_db_pass"
+    #echo "local DB_HOST is:       $l_db_host"
+    #echo
+
+    #Only prompt the user to pick the remote server if this function has been
+    #passed with the "remote" parameter set
+    if [ $parameter == "remote" ]
+    then
+
+        #Now that we've narrowed down the possibilities of what might be a remote
+        #server, prompt the user to pick which one to synchronize
+        echo "Synchronize with which remote server?"
+        select m in "${env_array[@]}"
+        do
+
+            echo
+            echo "You chose Environment #$m as your remote server."
+            echo
+
+            remote_env=$m
+
+            #SyncDB will only use one set of remote environment variables, so set them
+            #here based on the user's choice
+            remote_env_ref_0=set_$remote_env[0]
+            remote_env_ref_1=set_$remote_env[1]
+            remote_env_ref_2=set_$remote_env[2]
+            remote_env_ref_3=set_$remote_env[3]
+
+            r_db_name=${!remote_env_ref_0}
+            r_db_user=${!remote_env_ref_1}
+            r_db_pass=${!remote_env_ref_2}
+            r_db_host=${!remote_env_ref_3:-$PHP_OUT}
+
+            echo "============================================================" 
+            echo " REMOTE DATABASE DETAILS" 
+            echo "============================================================" 
+            echo
+
+            echo "remote DB_NAME is:       $r_db_name"
+            echo "remote DB_USER is:       $r_db_user"
+            echo "remote DB_PASSWORD is:   $r_db_pass"
+            echo "remote DB_HOST is:       $r_db_host"
+
+            echo
+            break
+
+        done
+
+    fi
+    echo
+}
+
+# ---------------------------------------------------------
+# return_local_standard ()
+# Get the local database login details. Used if the config file has only one
+# environment specified.
+# ---------------------------------------------------------
+return_local_standard () {
+
+    #grep the config file for the MySQL login details
+    l_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
+}
+
 # ---------------------------------------------------------
 # get_remote_db_details ()
 # Extract the remote database details from wp-config.php
@@ -327,31 +499,44 @@ get_remote_db_details () {
         exit 1
     fi
 
+    #This tells us how many times DB_USER has been set in the config file.
+    number_of_environments=$(grep -c "'DB_USER', '[^']*'.*" $local_config_file)
+
+    #grep returns "filename.php:4" if there's 4 hits. We want to strip away
+    #everything up to the colon and just save the number
+    number_of_environments=$(echo $number_of_environments | sed -e 's/.*://')
+    echo
+
+    #This detects if there's anything weird going on in the config file. If there
+    #are more than one instances of DB_USER, that's weird.
+    if [ $number_of_environments == 1 ]
+    then
+        return_remote_standard();
+    else
+        return_nonstandard remote
+    fi
+
+    #Local paths
+    r_bak_name1=$now-$r_db_name.mssql 
+
+}
+
+
+# ---------------------------------------------------------
+# return_remote_standard ()
+# Get the remote database login details. Used if the config file has only one
+# environment specified.
+# ---------------------------------------------------------
+return_remote_standard () {
+
     #grep the config file for the MySQL login details
     r_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" wp-config.php)
     r_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" wp-config.php)
     r_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" wp-config.php)
     r_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" wp-config.php)
 
-
-    #echo
-    #printf "============================================================\n" 
-    #printf " REMOTE DATABASE DETAILS\n" 
-    #printf "============================================================\n" 
-    #echo
-
-    #echo "remote DB_USER is:       $yellow$r_db_user$reset"
-    #echo "remote DB_NAME is:       $yellow$r_db_name$reset"
-    #echo "remote DB_PASSWORD is:   $yellow$r_db_pass$reset"
-    #echo "remote DB_HOST is:       $yellow$r_db_host$reset"
-
-    #echo "$green$msgSuccess$reset remote database details returned."
-
-
-    #Local paths
-    r_bak_name1=$now-$r_db_name.mssql 
-
 }
+
 
 # ---------------------------------------------------------
 # backup_remote_db ()
