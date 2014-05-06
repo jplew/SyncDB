@@ -2,7 +2,7 @@
 
 # ***********************************************
 #
-# syncDB v0.2.2
+# syncDB v0.2.3
 # by JP Lew (jplew.com)
 #
 # ***********************************************
@@ -63,11 +63,6 @@ no_drop= # set to true if your host sucks
     # ---------------------------------------------------------
 
 
-    # ---------------------------------------------------------
-    # non-standard wp-config
-    # ---------------------------------------------------------
-
-
 # ==========================================================
 #  SYSTEM-WIDE VARIABLES (preferences set once per machine)
 # ==========================================================
@@ -86,8 +81,6 @@ l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
     #
     # If you run your own AMP stack, then leave these variables blank.
     # ---------------------------------------------------------
-
-
 
 # ========================================
 #  OPTIONAL VARIABLES (you almost certainly won't have to touch these)
@@ -159,7 +152,6 @@ cliScriptName=srdb.cli.php
 srdbPath=https://raw.github.com/interconnectit/Search-Replace-DB/master/
 searchScriptPath=$srdbPath$searchScriptName
 cliScriptPath=$srdbPath$cliScriptName
-
 
 # initialize variable. Used because we need to test the SSH connection only once.
 checked=
@@ -262,9 +254,9 @@ get_local_db_details () {
 
     #This detects if there's anything weird going on in the config file. If there
     #are more than one instances of DB_USER, that's weird.
-    if [ $number_of_environments == 1 ]
+    if [[ $number_of_environments < 2 ]]
     then
-        return_local_standard();
+        return_local_standard
     else
         return_nonstandard local
     fi
@@ -277,7 +269,6 @@ get_local_db_details () {
 
 }
 
-
 # ---------------------------------------------------------
 # return_nonstandard ()
 # Some wp-config files have multiple sets of configuration variables, one
@@ -285,12 +276,11 @@ get_local_db_details () {
 # This function collects all the login info it can find, organizes it into
 # sets, auto-detects which one is the local set, and if necessary asks the user
 # which remote server they want to sync with. 
-# This function accepts a parameter, either 'local' or
-# 'remote'. 
+# This function accepts a parameter, either 'local' or 'remote'. 
 # ---------------------------------------------------------
 return_nonstandard () {
 
-    echo "SyncDB has detected multiple remote environment configurations in your $local_config_file."
+    echo "SyncDB has detected multiple remote environment configurations in your config file."
 
     #read the argument passed to the function. If the argument was omitted,
     #default to local
@@ -464,8 +454,9 @@ return_nonstandard () {
 
 # ---------------------------------------------------------
 # return_local_standard ()
-# Get the local database login details. Used if the config file has only one
-# environment specified.
+# A standard wp-config file has one set of environment variables declared. A
+# non-standard has more than one. This function fetches the local database
+# login details from a normal config file.
 # ---------------------------------------------------------
 return_local_standard () {
 
@@ -474,6 +465,21 @@ return_local_standard () {
     l_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
     l_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
     l_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
+}
+
+# ---------------------------------------------------------
+# return_remote_standard ()
+# Get the remote database login details. Used if the config file has only one
+# environment specified.
+# ---------------------------------------------------------
+return_remote_standard () {
+
+    #grep the config file for the MySQL login details
+    r_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" wp-config.php)
+    r_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" wp-config.php)
+    r_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" wp-config.php)
+    r_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" wp-config.php)
+
 }
 
 # ---------------------------------------------------------
@@ -495,12 +501,12 @@ get_remote_db_details () {
     
     if [[ ! -f wp-config.php ]]
     then
-        echo "${red}$msgError$reset: Could not locate wp-config.php";
+        echo "${red}$msgError$reset: Could not locate wp-config.php"
         exit 1
     fi
 
     #This tells us how many times DB_USER has been set in the config file.
-    number_of_environments=$(grep -c "'DB_USER', '[^']*'.*" $local_config_file)
+    number_of_environments=$(grep -c "'DB_USER', '[^']*'.*" wp-config.php)
 
     #grep returns "filename.php:4" if there's 4 hits. We want to strip away
     #everything up to the colon and just save the number
@@ -509,9 +515,9 @@ get_remote_db_details () {
 
     #This detects if there's anything weird going on in the config file. If there
     #are more than one instances of DB_USER, that's weird.
-    if [ $number_of_environments == 1 ]
+    if [[ $number_of_environments < 2 ]]
     then
-        return_remote_standard();
+        return_remote_standard
     else
         return_nonstandard remote
     fi
@@ -520,23 +526,6 @@ get_remote_db_details () {
     r_bak_name1=$now-$r_db_name.mssql 
 
 }
-
-
-# ---------------------------------------------------------
-# return_remote_standard ()
-# Get the remote database login details. Used if the config file has only one
-# environment specified.
-# ---------------------------------------------------------
-return_remote_standard () {
-
-    #grep the config file for the MySQL login details
-    r_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" wp-config.php)
-    r_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" wp-config.php)
-    r_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" wp-config.php)
-    r_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" wp-config.php)
-
-}
-
 
 # ---------------------------------------------------------
 # backup_remote_db ()
@@ -552,7 +541,7 @@ backup_remote_db () {
 
     if [ ! -d $r_bak_dir ]
     then
-        mkdir $r_bak_dir; 
+        mkdir $r_bak_dir 
     fi
 
     cd $r_bak_dir
@@ -587,7 +576,7 @@ download_remote_db () {
     echo
 
     if [ ! -d $l_bak_dir ] ; then
-        mkdir $l_bak_dir; 
+        mkdir $l_bak_dir 
     fi 
 
     cd $l_bak_dir
@@ -1179,7 +1168,7 @@ echo
 if [ $# -ne 0 ]
 then
     # place all the command names in an array
-    declare -a list_of_methods=(help download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_operations do_search_replace_remote rsync_push do_login_backup upload_script test_ssh)
+    declare -a list_of_methods=(help get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_operations do_search_replace_remote rsync_push do_login_backup upload_script test_ssh)
 
     # function to check if an item exists in an array
     contains_element () {
@@ -1208,3 +1197,4 @@ fi
 ${@:-push}
 
 
+exit 
