@@ -5,13 +5,7 @@
 # syncDB v0.2.2
 # by JP Lew (jplew.com)
 #
-# SyncDB is bash deploy script meant to take the tedium out of synchronizing
-# the local and remote versions of a Wordpress site. It allows developers
-# working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes
-# to or from the production server with a single command. 
-#
 # ***********************************************
-
 
 # ===================================================
 #  SITE-SPECIFIC VARIABLES (mandatory for each site)
@@ -25,68 +19,96 @@ r_port= # usually left blank
 r_web_addr=mywebsite.com
 l_web_addr=dev.mywebsite.com
 
-# $r_user is your FTP username. It is used to ssh into your site: `ssh
-# $r_user@ftp.mywebsite.com`.
+    # $r_user is your FTP username. It is used to ssh into your site: `ssh
+    # $r_user@ftp.mywebsite.com`.
 
-# $r_host is your FTP hostname. It is used to ssh into your site: `ssh
-# myusername@$r_host`.
+    # $r_host is your FTP hostname. It is used to ssh into your site: `ssh
+    # myusername@$r_host`.
 
-# $r_web_dir is the directory in which your remote site is located (usually
-# public_html, www, html etc...).
+    # $r_web_dir is the directory in which your remote site is located (relative to
+    # the user root). It's usually public_html, www, www/mywebsite.com/public_html
+    # etc...).
 
-# $r_port is an optional field specifying the port number to use. In most cases
-# this can remain blank, although Host Gator for examples requires port 22 to
-# connect via SSH.
+    # $r_port is an optional field specifying the port number to use. In most cases
+    # this can remain blank, although Host Gator for example requires port 22 to
+    # connect via SSH.
 
-# $r_web_addr is the web address, or site URL of your site. It is used for the
-# search and replace.
+    # $r_web_addr is the web address, or site URL of your site. It is used to
+    # search and replace your database.
 
-# $l_web_addr is whatever you set your local server name to. Something like localhost:8888 or dev.mywebsite.com or mywebsite.dev
+    # $l_web_addr is whatever you set your local server name to. Something like
+    # localhost:8888/mywebsite or dev.mywebsite.com or mywebsite.dev. We'll be
+    # search and replacing this string later on.
 
-# $l_site_dir is the full path to your site. It knows this because this is where you moved SyncDB.
-l_site_dir=${PWD}
-# $l_web_dir is the name of your site's root directory (same as $l_site_dir, but with the preceding folder path stripped off).
-l_web_dir=${PWD##*/}
+l_upload_dir=wp-content/uploads/
+r_upload_dir=wp-content/uploads/
 
-# ---------------------------------------------------------
-# `drop database` work-around
-# Some servers forbid the `drop database` command (Arvixe, I'm looking at you.)
-# Fortunately, there is an alternate mysql command we can issue to drop all the
-# tables in a database. By setting $no_drop to "true", the script will invoke
-# that command instead of the standard `drop`. Leave blank for default
-# behavior.
-# ---------------------------------------------------------
+    # $l_upload_dir and $r_upload_dir is where your site's 'uploads' folder is
+    # located. This tells rsync which directories on your FTP should be
+    # synchronized. If you're using WP-Skeleton
+    # <http://markjaquith.wordpress.com/2012/05/26/wordpress-skeleton/>, all you
+    # have to synchronize is your shared/ folder (content/uploads/ is symlinked to
+    # shared/content/uploads/). Otherwise, it's probably wp-content/uploads/.
+    # Remember to add a trailing slash.
+
 no_drop= # set to true if your host sucks
+
+    # ---------------------------------------------------------
+    # `drop database` work-around
+    # Some servers forbid the `drop database` command (Arvixe, I'm looking at you.)
+    # Fortunately, there is an alternate mysql command we can issue to drop all the
+    # tables in a database. By setting $no_drop to "true", the script will invoke
+    # that command instead of the standard `drop`. Leave blank for default
+    # behavior.
+    # ---------------------------------------------------------
+
+
+#l_db_name= # automatically detected for most set-ups (see note below)
+#l_db_user= # automatically detected for most set-ups (see note below)
+#l_db_pass= # automatically detected for most set-ups (see note below)
+#l_db_host= # automatically detected for most set-ups (see note below)
+
+#r_db_name= # automatically detected for most set-ups (see note below)
+#r_db_user= # automatically detected for most set-ups (see note below)
+#r_db_pass= # automatically detected for most set-ups (see note below)
+#r_db_host= # automatically detected for most set-ups (see note below)
+
+    # ---------------------------------------------------------
+    # non-standard wp-config
+    # Some wp-config files have multiple sets of configurations variables, one
+    # for each environment (local, dev, production/live etc...). This script is
+    # not designed to handle that, it can only deal with one
+    # set at a time. If you use such a non-standard wp-config.php, you must
+    # specify which pair of environments you want to synchronize by setting
+    # those variables here.
+    # ---------------------------------------------------------
+
 
 
 # ==========================================================
 #  SYSTEM-WIDE VARIABLES (preferences set once per machine)
 # ==========================================================
 
-# ---------------------------------------------------------
-# Custom mysql binaries (local)
-# If you want to use a non-default mysql and mysqldump binary (for example
-# MAMP's), you can specify it by setting $l_mysql and $l_mysqldump. Check your
-# server's default address like this: `type -a mysqldump`. with MAMP you'd
-# use:
-    #l_mysql=/Applications/MAMP/Library/bin/mysql
-    #l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
-
-# ---------------------------------------------------------
-
 #l_mysql=
 #l_mysqldump=
 l_mysql=/Applications/MAMP/Library/bin/mysql
 l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
 
-# $l_upload_dir and $r_upload_dir are where your site's 'uploads' folder is
-# located. This tells rsync which directories on your FTP should be
-# synchronized. If you're using WP-Skeleton
-# <http://markjaquith.wordpress.com/2012/05/26/wordpress-skeleton/>, all you
-# have to synchronize is your shared/ folder (content/uploads/ is symlinked to
-# shared/content/uploads/). Otherwise, it's probably wp-content/uploads/.
-l_upload_dir=wp-content/uploads/
-r_upload_dir=wp-content/uploads/
+    # ---------------------------------------------------------
+    # Custom mysql binaries (local)
+    # If you're using MAMP, you need to specify which mysql and mysqldump binaries
+    # you want to invoke: MAMP's. This is because, by default, running mysql or
+    # mysqldump from the command line will execute your system defaults (type
+    # `which mysql` to see where they're located). 
+    #
+    # If you run your own AMP stack, then leave these variables blank.
+    # ---------------------------------------------------------
+
+
+
+# ========================================
+#  OPTIONAL VARIABLES (you almost certainly won't have to touch these)
+# ========================================
 
 # This is the arbitrary name and path to your backups folder. Located in your site's root directory. 
 l_bak_dir=.bak
@@ -96,7 +118,14 @@ r_bak_dir=.bak
 l_bak_name2=latest-local.mssql 
 r_bak_name2=latest-remote.mssql
 
-# Path expansions. You will likely not have to touch these.
+# $l_site_dir is the absolute path to your local site. This is automatically
+# deduced based on the directory into which you moved SyncDB.
+l_site_dir=${PWD}
+# $l_web_dir is the name of your site's root directory (same as $l_site_dir,
+# but with the preceding directory path stripped off).
+l_web_dir=${PWD##*/}
+
+# Path expansions. You likely leave these as-is.
 l_bak_path2=$l_site_dir/$l_bak_dir/$l_bak_name2
 l_upload_path=$l_site_dir/$l_upload_dir
 r_upload_path=$r_web_dir/$r_upload_dir
@@ -149,9 +178,8 @@ searchScriptPath=$srdbPath$searchScriptName
 cliScriptPath=$srdbPath$cliScriptName
 
 
-# initialize variable. Used because we only need to test the SSH connection once.
+# initialize variable. Used because we need to test the SSH connection only once.
 checked=
-
 
 # ====================================
 #  FUNCTIONS
@@ -227,7 +255,9 @@ get_local_db_details () {
         cd $l_site_dir
     fi 
 
-    # If local-config.php is not found (if you're using the default Wordpress architecture rather than using WP-Skeleton like I recommend, then search for the local DB info in wp-config.php
+    # If local-config.php is not found (if you're using the default Wordpress
+    # architecture rather than using WP-Skeleton like I recommend, then search
+    # for the local DB info in wp-config.php
     if [[ -f local-config.php ]]
     then
         local_config_file=local-config.php
@@ -239,14 +269,17 @@ get_local_db_details () {
         exit 1
     fi
 
+    grep_output=$(grep -c "'DB_USER', '[^']*'.*" $local_config_file)
+
+    number_of_environments=$(echo $grep_output | sed -e 's/.*://')
+
+
+
+    #grep the config file for the MySQL login details
     l_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
     l_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
     l_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
     l_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
-
-    #Local paths
-    l_bak_name1=$now-$l_db_name.mssql
-    l_bak_path1=$l_site_dir/$l_bak_dir/$l_bak_name1
 
     #echo
     #printf "============================================================\n" 
@@ -263,6 +296,11 @@ get_local_db_details () {
 
     #echo "$green$msgSuccess$reset Local database details returned."
 
+
+    #Local paths
+    l_bak_name1=$now-$l_db_name.mssql
+    l_bak_path1=$l_site_dir/$l_bak_dir/$l_bak_name1
+
     echo
 
 }
@@ -272,7 +310,7 @@ get_local_db_details () {
 # ---------------------------------------------------------
 get_remote_db_details () {
 
-    #echo "${blue}Fetching remote database login details...$reset"
+    echo "${blue}Fetching remote database login details...$reset"
 
     # Change directory to site root (where local-config.php and wp-config.php are located)
     if [ ! -d $r_site_dir ] ; then
@@ -289,13 +327,12 @@ get_remote_db_details () {
         exit 1
     fi
 
+    #grep the config file for the MySQL login details
     r_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" wp-config.php)
     r_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" wp-config.php)
     r_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" wp-config.php)
     r_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" wp-config.php)
 
-    #Local paths
-    r_bak_name1=$now-$r_db_name.mssql 
 
     #echo
     #printf "============================================================\n" 
@@ -311,6 +348,9 @@ get_remote_db_details () {
     #echo "$green$msgSuccess$reset remote database details returned."
 
 
+    #Local paths
+    r_bak_name1=$now-$r_db_name.mssql 
+
 }
 
 # ---------------------------------------------------------
@@ -325,9 +365,9 @@ backup_remote_db () {
 
     cd $HOME/$r_web_dir
 
-    if [ ! -d $l_bak_dir ]
+    if [ ! -d $r_bak_dir ]
     then
-        mkdir $l_bak_dir; 
+        mkdir $r_bak_dir; 
     fi
 
     cd $r_bak_dir
@@ -338,14 +378,15 @@ backup_remote_db () {
 
     if [[ $? -eq 1 ]]
     then 
-        echo ${red}Could not backup remote database.$reset
+        echo ${red}$msgError$reset Could not backup remote database.$reset
         exit 1
     else
         echo
-        echo "$green$msgSuccess$reset Remote database dumped to: $(pwd)/${r_bak_name1}.bz2 and $(pwd)/${r_bak_name2}.bz2"
+        echo "${green}$msgSuccess$reset Remote database dumped to: $(pwd)/${r_bak_name1}.bz2 and $(pwd)/${r_bak_name2}.bz2"
         echo
     fi
 
+    echo "cp ${r_bak_name1}.bz2 ${r_bak_name2}.bz2"
     cp ${r_bak_name1}.bz2 ${r_bak_name2}.bz2
 
 }
@@ -376,7 +417,7 @@ download_remote_db () {
         echo
         echo "$green$msgSuccess$reset Remote database downloaded to: $(pwd)/${r_bak_name2}.bz2"
     else
-        echo "$red$msgError$reset Download did not work. Exiting."
+        echo "$red$msgError$reset Download did not work. Could not find $(pwd)/${r_bak_name2}.bz2"
         exit 1
     fi
 }
@@ -389,8 +430,7 @@ backup_local_db () {
 
     get_local_db_details
 
-    msg3=''
-    echo "${blue}Backing up the local database...$reset\n\n" 
+    echo "${blue}Backing up the local database...$reset" 
 
     cd $l_site_dir
 
@@ -414,12 +454,13 @@ backup_local_db () {
         echo "$green$msgSuccess$reset Local database backed up to: $(pwd)/${l_bak_name1}.bz2"
     else
         echo
-        echo "$red$msgError$reset Database was not backed up. There is either a problem with your login details or with your mysqldump binary. Exiting."
+        echo "$red$msgError$reset Database was not backed up. There is either a problem with your local MySQL details. Exiting."
         echo
         exit 1
     fi
 
     echo
+    echo "cp ${l_bak_name1}.bz2 ${l_bak_name2}.bz2"
     cp ${l_bak_name1}.bz2 ${l_bak_name2}.bz2
 }
 
@@ -443,10 +484,9 @@ replace_local_db () {
         create database $l_db_name;
 EOF
 
-    mysql_check_local || exit 1
+    mysql_check_local
 
     echo
-
     echo
     echo "${blue}Replacing contents of local database...$reset"
     echo
@@ -486,7 +526,7 @@ do_check_for_dirs () {
 
     echo "Checking for existence of remote directories..."
 
-    ssh -q "$ssh_port""$r_user"@"$r_host" "if [[ ! -d "$r_web_dir" ]]; then echo "Directory does not exist: $r_web_dir"; exit 1; fi; cd "$r_web_dir"; if [[ ! -d "$r_bak_dir" ]]; then mkdir "$r_bak_dir"; fi;" 
+    ssh -q "$ssh_port""$r_user"@"$r_host" "if [[ ! -d "$r_web_dir" ]]; then echo "Remote directory does not exist: $r_web_dir"; exit 1; fi; cd "$r_web_dir"; if [[ ! -d "$r_bak_dir" ]]; then mkdir "$r_bak_dir"; fi;" 
 
     checked=true
 }
@@ -551,8 +591,6 @@ upload_local_db () {
 
     # check if we've already checked the remote path structure. If not, check now
     [[ "$checked" ]] || do_check_for_dirs
-
-    ssh $ssh_port$r_user@$r_host "if [[ ! -d $r_web_dir ]]; then echo "Directory does not exist: $r_web_dir"; exit 1; fi; cd $r_web_dir; if [[ ! -d $r_bak_dir ]]; then mkdir $r_bak_dir; fi;" 
 
     cd $l_site_dir/$l_bak_dir
 
@@ -763,16 +801,6 @@ search_replace_local () {
 
     echo "$blue}Search and replace database fields.$reset"
 
-    if [ ! -f $searchScriptName ] ; then 
-        wget $searchScriptPath
-        chmod a+x $searchScriptName
-    fi
-
-    if [ ! -f $cliScriptName ] ; then 
-        wget $cliScriptPath
-        chmod a+x $cliScriptName
-    fi
-
     get_local_db_details
 
     # If $l_db_host is set to localhost, the CLI script will fail. The reason
@@ -813,10 +841,7 @@ search_replace_remote () {
     install_search_scripts
 
     echo
-
     echo "${blue}Search and replace database fields...$reset" 
-
-    old_shebang=$(sed -n 1p "${cliScriptName}")
 
     my_php=$(which php)
     default_php=/usr/bin/php
@@ -826,6 +851,8 @@ search_replace_remote () {
     then
 
         echo "${yellow}PHP Binary:$reset Your server uses $my_php"
+
+        old_shebang=$(sed -n 1p "${cliScriptName}")
         sed -i "1c #!${my_php} -q" $cliScriptName
 
         echo "Shebang line changed from ${yellow}${old_shebang}$reset to $yellow#!${my_php} -q$reset"
