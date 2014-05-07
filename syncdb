@@ -286,6 +286,17 @@ return_nonstandard () {
     #default to local
     parameter=${1:-local}
 
+    if [[ -f local-config.php ]]
+    then
+        local_config_file=local-config.php
+    elif [[ -f wp-config.php ]]
+    then
+        local_config_file=wp-config.php
+    else
+        echo "${red}$msgError$reset: Could not locate local-config.php or wp-config.php"
+        exit 1
+    fi
+
     #grep the config file for all relevants hits, and saves them to their
     #respective category. All hits are delimited by spaces.
     l_db_name=$(sed -n "s/.*DB_NAME',\s*'\([^']*\)'.*/\1/p" $local_config_file)
