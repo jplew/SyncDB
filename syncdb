@@ -288,10 +288,10 @@ return_nonstandard () {
 
     #grep the config file for all relevants hits, and saves them to their
     #respective category. All hits are delimited by spaces.
-    l_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_name=$(sed -n "s/.*DB_NAME',\s*'\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_user=$(sed -n "s/.*DB_USER',\s*'\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_pass=$(sed -n "s/.*DB_PASSWORD',\s*'\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_host=$(sed -n "s/.*DB_HOST',\s*'\([^']*\)'.*/\1/p" $local_config_file)
 
     #This splits the previous values into arrays
     name_array=(${l_db_name// / })
@@ -461,10 +461,11 @@ return_nonstandard () {
 return_local_standard () {
 
     #grep the config file for the MySQL login details
-    l_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_name=$(sed -n "s/.*DB_NAME',\s*'\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_user=$(sed -n "s/.*DB_USER',\s*'\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_pass=$(sed -n "s/.*DB_PASSWORD',\s*'\([^']*\)'.*/\1/p" $local_config_file)
+    l_db_host=$(sed -n "s/.*DB_HOST',\s*'\([^']*\)'.*/\1/p" $local_config_file)
+
 }
 
 # ---------------------------------------------------------
@@ -475,10 +476,10 @@ return_local_standard () {
 return_remote_standard () {
 
     #grep the config file for the MySQL login details
-    r_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" wp-config.php)
-    r_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" wp-config.php)
-    r_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" wp-config.php)
-    r_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" wp-config.php)
+    r_db_name=$(sed -n "s/.*DB_NAME',\s*'\([^']*\)'.*/\1/p" wp-config.php)
+    r_db_user=$(sed -n "s/.*DB_USER',\s*'\([^']*\)'.*/\1/p" wp-config.php)
+    r_db_pass=$(sed -n "s/.*DB_PASSWORD',\s*'\([^']*\)'.*/\1/p" wp-config.php)
+    r_db_host=$(sed -n "s/.*DB_HOST',\s*'\([^']*\)'.*/\1/p" wp-config.php)
 
 }
 
@@ -628,7 +629,7 @@ backup_local_db () {
         echo "$green$msgSuccess$reset Local database backed up to: $(pwd)/${l_bak_name1}.bz2"
     else
         echo
-        echo "$red$msgError$reset Database was not backed up. There is either a problem with your local MySQL details. Exiting."
+        echo "$red$msgError$reset Database was not backed up. There is a problem with your local MySQL details. Exiting."
         echo
         exit 1
     fi
@@ -749,7 +750,7 @@ do_login_backup () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
-    echo "ssh -t $ssh_port$r_user@$r_host cd $r_web_dir; ./$(basename $0) backup_remote_db;"
+    echo "ssh -t $ssh_port$r_user@$r_host cd $r_web_dir; chmod +x $(basename $0); ./$(basename $0) backup_remote_db;"
     ssh -t $ssh_port$r_user@$r_host "cd $r_web_dir; ./$(basename $0) backup_remote_db;"
 
 }
