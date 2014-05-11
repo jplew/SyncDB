@@ -961,13 +961,13 @@ install_search_scripts () {
         if [ -f "$searchScriptName" -a -f "$cliScriptName" ]
         then
             echo
-            echo "${green}$msgSuccess$reset $searchScriptName and $cliScriptName downloaded to $r_site_dir/$r_bak_dir/"
+            echo "${green}$msgSuccess$reset $searchScriptName and $cliScriptName downloaded to $(pwd)."
             echo "chmod a+x $searchScriptName $cliScriptName"
             chmod a+x $searchScriptName $cliScriptName
         else
             echo
             echo
-            echo >&2 "${red}$msgError$reset Search and Replace Tool download failed."
+            echo >&2 "${red}$msgError$reset Search and Replace Tool download failed. Could not find $searchScriptName and $cliScriptName in $(pwd). Exiting."
             exit 1
         fi
     fi
