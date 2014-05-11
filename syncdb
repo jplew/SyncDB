@@ -149,7 +149,7 @@ now=$(date +"%y%m%d-%H%M")
 # Search-Replace-DB
 searchScriptName=srdb.class.php
 cliScriptName=srdb.cli.php
-srdbPath=https://raw.github.com/interconnectit/Search-Replace-DB/master/
+srdbPath=https://raw.githubusercontent.com/interconnectit/Search-Replace-DB/master/
 searchScriptPath=$srdbPath$searchScriptName
 cliScriptPath=$srdbPath$cliScriptName
 
