@@ -170,8 +170,8 @@ cat <<EOF
     ${blue}SyncDB List of Commands$reset
 
     • backup_local_db
-    • do_login_backup
-    • do_remote_operations
+    • do_remote_bacup
+    • do_remote_replace
     • do_search_replace_remote
     • download_remote_db
     • push
@@ -257,7 +257,8 @@ get_local_db_details () {
     if [[ $number_of_environments < 2 ]]
     then
         return_local_standard
-    else
+    elif [[ ${local_chosen-} != "true" ]]
+    then
         return_nonstandard local
     fi
 
@@ -364,7 +365,9 @@ return_nonstandard () {
             #have to consider it.
             unset env_array[$local_env]
 
-            if [ "$i" -ne "$local_env" ]
+            #don't print the local details, and if we're remote, we only need to
+            #output these once, when the correct remote settings are selected
+            if [[ "$i" -ne "$local_env" ]]
             then
 
                 #Display the title, "Environment #x", only once, on the first
@@ -403,6 +406,8 @@ return_nonstandard () {
     l_db_pass=${!local_env_ref_2}
     l_db_host=${!local_env_ref_3}
 
+    local_chosen=true
+
     #echo "============================================================" 
     #echo " LOCAL DATABASE DETAILS" 
     #echo "============================================================" 
@@ -416,9 +421,10 @@ return_nonstandard () {
 
     #Only prompt the user to pick the remote server if this function has been
     #passed with the "remote" parameter set
-    if [ $parameter == "remote" ]
+    if [[ $parameter == "remote" ]]
     then
 
+        echo
         #Now that we've narrowed down the possibilities of what might be a remote
         #server, prompt the user to pick which one to synchronize
         echo "Synchronize with which remote server?"
@@ -454,12 +460,14 @@ return_nonstandard () {
             echo "remote DB_HOST is:       $r_db_host"
 
             echo
+            # a flag which indicates whether the user has selected a remote environment already. This is so it doesn't pester the user repeatedly with this request.
+            remote_chosen=true
             break
 
         done
 
-    fi
     echo
+    fi
 }
 
 # ---------------------------------------------------------
@@ -528,7 +536,8 @@ get_remote_db_details () {
     if [[ $number_of_environments < 2 ]]
     then
         return_remote_standard
-    else
+    elif [[ ${remote_chosen-} != "true" ]]
+    then
         return_nonstandard remote
     fi
 
@@ -751,11 +760,11 @@ upload_script () {
 
 
 # ---------------------------------------------------------
-# do_login_backup ()
+# do_remote_bacup ()
 # Login to the remote server via SSH and call backup_remote_db(). Meant to be
 # run locally.
 # ---------------------------------------------------------
-do_login_backup () {
+do_remote_bacup () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
@@ -881,7 +890,7 @@ replace_remote_db () {
     then
 
         # do this if the standard `drop database` command is available
-        mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bs<<EOF
+        mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bs<<EOF >/dev/null 2>&1
         create database if not exists $r_db_name;
         drop database $r_db_name;
         create database $r_db_name;
@@ -889,7 +898,7 @@ EOF
 
     else
         # otherwise do this if `drop database` is not available
-        sql_show="show databases; create database if not exists $r_db_name;"
+        sql_show="show databases; create database if not exists $r_db_name >/dev/null 2>&1;"
 
         echo "mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bse $sql_show"
 
@@ -1066,10 +1075,10 @@ search_replace_remote () {
 }
 
 # ---------------------------------------------------------
-# do_remote_operations ()
+# do_remote_replace ()
 # Login to remote server and execute replace_remote_db() method.
 # ---------------------------------------------------------
-do_remote_operations () {
+do_remote_replace () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
@@ -1128,9 +1137,9 @@ push () {
 
     upload_script
 
-    do_login_backup
+    do_remote_bacup
 
-    do_remote_operations
+    do_remote_replace
 
     do_search_replace_remote
 
@@ -1152,7 +1161,7 @@ pull () {
 
     upload_script
 
-    do_login_backup
+    do_remote_bacup
 
     download_remote_db
 
@@ -1181,7 +1190,7 @@ echo
 if [ $# -ne 0 ]
 then
     # place all the command names in an array
-    declare -a list_of_methods=(help upload_local_db get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_operations do_search_replace_remote rsync_push do_login_backup upload_script test_ssh)
+    declare -a list_of_methods=(help upload_local_db get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_replace do_search_replace_remote rsync_push do_remote_bacup upload_script test_ssh)
 
     # function to check if an item exists in an array
     contains_element () {
