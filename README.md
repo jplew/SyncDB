@@ -1,4 +1,4 @@
-SyncDB v0.2.2
+SyncDB v0.3
 ===========
 
 SyncDB is bash deploy script meant to take the tedium out of synchronizing local and remote versions of a Wordpress site. It allows developers working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes to or from their production server with a single terminal command. 
@@ -19,8 +19,8 @@ No more FTP programs, no more PHPMyAdmin, no more tears. SyncDB don't mess aroun
 
 1. Copy syncdb to the root of your site and make sure it's executable (`chmod +x syncdb`).
     + This is important, as the script must be located in the same folder as your wp-config.php (and your local-config.php, if you're doing it the smart way ([Mark Jaquith's WP-Skeleton](http://markjaquith.wordpress.com/2012/05/26/wordpress-skeleton/)).
-2. Configure the script
-    + This step involves manually editing the variables located at the top of the script using your favorite text editor. This has to be done once for each local/remote site pair. All the settings are documented via comments in the script itself.
+2. Copy syncdb-config to the same location and configure it.
+    + This step involves manually editing the variables in the config file using your favorite text editor. This has to be done once for each local/remote site pair. All the settings are documented via comments.
 
 3. Run syncdb command from the command line: `./syncdb [command]`
 
@@ -59,7 +59,7 @@ All commands are meant to be executed locally, unless noted with *(remote only)*
          + `upload_local_db()`
          + `upload_script()`
          + `do_remote_backup()`
-         + `do_remote_operations()`
+         + `do_remote_replace()`
          + `do_search_replace_remote()`
          + `rsync_push()`
 
@@ -104,7 +104,7 @@ All commands are meant to be executed locally, unless noted with *(remote only)*
    + replace\_local\_db
      + Drop then recreate the local database. This effectively deletes all the tables.
 
-   + do\_remote\_operations
+   + do\_remote\_replace
      + Login to remote server and execute `replace_remote_db()` method.
 
    + replace\_remote\_db
@@ -143,6 +143,7 @@ I wrote this script due to my recurring need to migrate Wordpress sites. I requi
  * Git-managed code using Joe Maller's awesome [Web-focused Git workflow](<http://joemaller.com/990/a-web-focused-git-workflow/>) *[optional]*
  * Wordpress installation using Mark Jaquith's [WP-Skeleton](<http://markjaquith.wordpress.com/2012/05/26/wordpress-skeleton/>) *[recommended]*
      + one key benefit is that you require only one version of `wp-config.php` between your local and remote host. Therefore, you don't have to modify it each time you push or pull changes. Make sure your `local-config.php` has been added to your `.gitignore`. 
+     + Note: another clever way to manage wp-config.php is to have one master file common to all your environments. See [WordPress-Config-Bootstrap](<https://github.com/Abban/WordPress-Config-Bootstrap>) for details. SyncDB is designed to handle any of these methods.
 
 ### The Model
 
@@ -182,6 +183,13 @@ Easy!
 
 
 ## Changelog
+
+v0.3 (May 22, 2014)
+----
+ * SyncDB now supports wp-config.php files with multiple environments. For example [WordPress-Config-Bootstrap](<https://github.com/Abban/WordPress-Config-Bootstrap>)
+ * SyncDB now requires an external config file, syncdb-config, in order to run. This separation of user preferences from the core script will make it easier to update SyncDB as new versions are released. 
+ * This release hasn't seen much testing yet. If it's acting buggy you can revert back to a more stable version by going `git checkout v0.2.2`.
+ * Special thanks to [@dvclmn](https://github.com/dvclmn) and [@joshuaiz](https://github.com/joshuaiz)
 
 v0.22 (May 2, 2014)
 ----

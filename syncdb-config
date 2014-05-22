@@ -1,0 +1,81 @@
+# ===================================================
+#  SITE-SPECIFIC VARIABLES (mandatory for each site)
+# ===================================================
+
+r_user=divy4982
+r_host=divyakala.com
+r_web_dir=html
+r_port= # usually left blank
+
+l_web_addr=dev.divyakala.com
+r_web_addr=divyakala.com
+r_web_addr_alt=divyakala.com
+
+
+# $r_user is your FTP username. It is used to ssh into your site: `ssh
+# $r_user@ftp.mywebsite.com`.
+
+# $r_host is your FTP hostname. It is used to ssh into your site: `ssh
+# myusername@$r_host`.
+
+    # $r_web_dir is the directory in which your remote site is located (relative to
+    # the user root). It's usually public_html, www, www/mywebsite.com/public_html
+    # etc...).
+
+    # $r_port is an optional field specifying the port number to use. In most cases
+    # this can remain blank, although Host Gator for example requires port 22 to
+    # connect via SSH.
+
+    # $l_web_addr is whatever you set your local server name to. Something like
+    # localhost:8888/mywebsite or dev.mywebsite.com or mywebsite.dev. We'll be
+    # search and replacing this string later on.
+
+    # $r_web_addr is the web address, or site URL of your site. It is used to
+    # search and replace your database.
+    #
+    # $r_web_addr_alt is for those who, rather than running site pairs, run
+    # triplets: local, dev, and production. $r_web_addr_alt is a slot for
+    # another search string. If you set this variable, the Search and Replace
+    # function will prompt you each time which remote site you are trying to syncing
+    # with, your dev or your production/live site.
+
+l_upload_dir=wp-content/uploads/
+r_upload_dir=wp-content/uploads/
+
+    # ---------------------------------------------------------
+    # uploads directories
+    # $l_upload_dir and $r_upload_dir represent where your site's 'uploads' folder is
+    # located. This tells rsync which directories on your FTP should be
+    # synchronized. If you're using WP-Skeleton
+    # <http://markjaquith.wordpress.com/2012/05/26/wordpress-skeleton/>, all you
+    # have to synchronize is your shared/ folder (content/uploads/ is symlinked to
+    # shared/content/uploads/). Otherwise, it's probably wp-content/uploads/.
+    # Remember to add a trailing slash.
+    # ---------------------------------------------------------
+
+no_drop= # set to true if your host sucks
+
+    # ---------------------------------------------------------
+    # `drop database` work-around
+    # Some servers forbid the `drop database` command (Arvixe, I'm looking at you.)
+    # Fortunately, there is an alternate mysql command we can issue to drop all the
+    # tables in a database. By setting $no_drop to "true", the script will invoke
+    # that command instead of the standard `drop`. Leave blank for default
+    # behavior.
+    # ---------------------------------------------------------
+
+
+#l_mysql=
+#l_mysqldump=
+l_mysql=/Applications/MAMP/Library/bin/mysql
+l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
+
+    # ---------------------------------------------------------
+    # Custom mysql binaries (local)
+    # If you're using MAMP, you need to specify which mysql and mysqldump binaries
+    # you want to invoke: MAMP's. This is because, by default, running mysql or
+    # mysqldump from the command line will execute your system defaults (type
+    # `which mysql` to see where they're located). 
+    #
+    # If you run your own AMP stack, then leave these variables blank.
+    # ---------------------------------------------------------

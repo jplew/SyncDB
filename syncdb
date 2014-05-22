@@ -2,85 +2,24 @@
 
 # ***********************************************
 #
-# syncDB v0.2.4
+# syncDB v0.2.5
 # by JP Lew (jplew.com)
 #
 # ***********************************************
 
-# ===================================================
-#  SITE-SPECIFIC VARIABLES (mandatory for each site)
-# ===================================================
-
-r_user=myusername
-r_host=ftp.mywebsite.com
-r_web_dir=public_html
-r_port= # usually left blank
-
-r_web_addr=mywebsite.com
-l_web_addr=dev.mywebsite.com
-
-    # $r_user is your FTP username. It is used to ssh into your site: `ssh
-    # $r_user@ftp.mywebsite.com`.
-
-    # $r_host is your FTP hostname. It is used to ssh into your site: `ssh
-    # myusername@$r_host`.
-
-    # $r_web_dir is the directory in which your remote site is located (relative to
-    # the user root). It's usually public_html, www, www/mywebsite.com/public_html
-    # etc...).
-
-    # $r_port is an optional field specifying the port number to use. In most cases
-    # this can remain blank, although Host Gator for example requires port 22 to
-    # connect via SSH.
-
-    # $r_web_addr is the web address, or site URL of your site. It is used to
-    # search and replace your database.
-
-    # $l_web_addr is whatever you set your local server name to. Something like
-    # localhost:8888/mywebsite or dev.mywebsite.com or mywebsite.dev. We'll be
-    # search and replacing this string later on.
-
-l_upload_dir=wp-content/uploads/
-r_upload_dir=wp-content/uploads/
-
-    # $l_upload_dir and $r_upload_dir is where your site's 'uploads' folder is
-    # located. This tells rsync which directories on your FTP should be
-    # synchronized. If you're using WP-Skeleton
-    # <http://markjaquith.wordpress.com/2012/05/26/wordpress-skeleton/>, all you
-    # have to synchronize is your shared/ folder (content/uploads/ is symlinked to
-    # shared/content/uploads/). Otherwise, it's probably wp-content/uploads/.
-    # Remember to add a trailing slash.
-
-no_drop= # set to true if your host sucks
-
-    # ---------------------------------------------------------
-    # `drop database` work-around
-    # Some servers forbid the `drop database` command (Arvixe, I'm looking at you.)
-    # Fortunately, there is an alternate mysql command we can issue to drop all the
-    # tables in a database. By setting $no_drop to "true", the script will invoke
-    # that command instead of the standard `drop`. Leave blank for default
-    # behavior.
-    # ---------------------------------------------------------
+config_file=syncdb-config
+temp_file=syncdb-temp
 
 
-# ==========================================================
-#  SYSTEM-WIDE VARIABLES (preferences set once per machine)
-# ==========================================================
+if [[ -f $config_file  ]]
+then
+    #source the config_file
+    . $config_file
+else
+    echo "${red}$msgError$reset: Could not locate $config_file."
+    exit 1
+fi
 
-#l_mysql=
-#l_mysqldump=
-l_mysql=/Applications/MAMP/Library/bin/mysql
-l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
-
-    # ---------------------------------------------------------
-    # Custom mysql binaries (local)
-    # If you're using MAMP, you need to specify which mysql and mysqldump binaries
-    # you want to invoke: MAMP's. This is because, by default, running mysql or
-    # mysqldump from the command line will execute your system defaults (type
-    # `which mysql` to see where they're located). 
-    #
-    # If you run your own AMP stack, then leave these variables blank.
-    # ---------------------------------------------------------
 
 # ========================================
 #  OPTIONAL VARIABLES (you almost certainly won't have to touch these)
@@ -170,7 +109,7 @@ cat <<EOF
     ${blue}SyncDB List of Commands$reset
 
     • backup_local_db
-    • do_remote_bacup
+    • do_remote_backup
     • do_remote_replace
     • do_search_replace_remote
     • download_remote_db
@@ -250,7 +189,6 @@ get_local_db_details () {
     #grep returns "filename.php:4" if there's 4 hits. We want to strip away
     #everything up to the colon and just save the number
     number_of_environments=$(echo $number_of_environments | sed -e 's/.*://')
-    echo
 
     #This detects if there's anything weird going on in the config file. If there
     #are more than one instances of DB_USER, that's weird.
@@ -269,7 +207,7 @@ get_local_db_details () {
 }
 
 # ---------------------------------------------------------
-# return_nonstandard ()
+# return_remote_nonstandard ()
 # Some wp-config files have multiple sets of configuration variables, one
 # for each environment (local, dev, production/live etc...). 
 # This function collects all the login info it can find, organizes it into
@@ -277,14 +215,13 @@ get_local_db_details () {
 # which remote server they want to sync with. 
 # This function accepts a parameter, either 'local' or 'remote'. 
 # ---------------------------------------------------------
-return_nonstandard () {
+return_remote_nonstandard () {
 
     echo "SyncDB has detected multiple remote environment configurations in your config file."
 
-    #read the argument passed to the function. If the argument was omitted,
-    #default to local
-    parameter=${1:-local}
-
+    # If local-config.php is not found (if you're using the default Wordpress
+    # architecture rather than using WP-Skeleton like I recommend, then search
+    # for the local DB info in wp-config.php
     if [[ -f local-config.php ]]
     then
         local_config_file=local-config.php
@@ -298,16 +235,16 @@ return_nonstandard () {
 
     #grep the config file for all relevants hits, and saves them to their
     #respective category. All hits are delimited by spaces.
-    l_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
-    l_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
+    all_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" wp-config.php)
+    all_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" wp-config.php)
+    all_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" wp-config.php)
+    all_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" wp-config.php)
 
     #This splits the previous values into arrays
-    name_array=(${l_db_name// / })
-    user_array=(${l_db_user// / })
-    pass_array=(${l_db_pass// / })
-    host_array=(${l_db_host// / })
+    name_array=(${all_db_name// / })
+    user_array=(${all_db_user// / })
+    pass_array=(${all_db_pass// / })
+    host_array=(${all_db_host// / })
 
     #Checking if DB_HOST was empty for any environments. This means it
     #wasn't hard-coded, and is using _ENV{DATABASE-SERVER} instead. Rather than
@@ -316,8 +253,8 @@ return_nonstandard () {
     do
 
         #when -u is set for bash, one valid way to test the existence of a
-        #variable, without getting an "unbound variable" error, is to set the
-        #default value to empty like this ${variable-}
+        #variable, without getting an "unbound variable" error, is to set #default value to empty like this ${variable-e
+
         if [ -z "${host_array[$i]-}" ]
         then
             db_host=${DATABASE_SERVER:=unset}
@@ -394,6 +331,146 @@ return_nonstandard () {
 
     done
 
+    echo
+    #Now that we've narrowed down the possibilities of what might be a remote
+    #server, prompt the user to pick which one to synchronize
+    echo "Synchronize with which remote server?"
+    select m in "${env_array[@]}"
+    do
+
+        echo
+        echo "You chose Environment #$m as your remote server."
+        echo
+
+        remote_env=$m
+
+        #SyncDB will only use one set of remote environment variables, so set them
+        #here based on the user's choice
+        remote_env_ref_0=set_$remote_env[0]
+        remote_env_ref_1=set_$remote_env[1]
+        remote_env_ref_2=set_$remote_env[2]
+        remote_env_ref_3=set_$remote_env[3]
+
+        r_db_name=${!remote_env_ref_0}
+        r_db_user=${!remote_env_ref_1}
+        r_db_pass=${!remote_env_ref_2}
+        r_db_host=${!remote_env_ref_3:-$db_host}
+
+        echo "============================================================" 
+        echo " REMOTE DATABASE DETAILS" 
+        echo "============================================================" 
+        echo
+
+        echo "remote DB_NAME is:       $r_db_name"
+        echo "remote DB_USER is:       $r_db_user"
+        echo "remote DB_PASSWORD is:   $r_db_pass"
+        echo "remote DB_HOST is:       $r_db_host"
+
+        echo
+        # a flag which indicates whether the user has selected a remote environment already. This is so it doesn't pester the user repeatedly with this request.
+        remote_chosen=true
+
+        cat <<EOT > $temp_file
+r_db_name=${!remote_env_ref_0}
+r_db_user=${!remote_env_ref_1}
+r_db_pass=${!remote_env_ref_2}
+r_db_host=${!remote_env_ref_3:-$db_host}
+
+remote_chosen=true
+EOT
+
+        break
+
+    done
+
+    echo
+
+}
+
+# ---------------------------------------------------------
+# return_local_nonstandard ()
+# Some wp-config files have multiple sets of configuration variables, one
+# for each environment (local, dev, production/live etc...). 
+# This function collects all the login info it can find, organizes it into
+# sets, auto-detects which one is the local set, and if necessary asks the user
+# which remote server they want to sync with. 
+# This function accepts a parameter, either 'local' or 'remote'. 
+# ---------------------------------------------------------
+return_local_nonstandard () {
+
+    #grep the config file for all relevants hits, and saves them to their
+    #respective category. All hits are delimited by spaces.
+    all_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
+    all_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
+    all_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
+    all_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
+
+    #This splits the previous values into arrays
+    name_array=(${all_db_name// / })
+    user_array=(${all_db_user// / })
+    pass_array=(${all_db_pass// / })
+    host_array=(${all_db_host// / })
+
+    #Checking if DB_HOST was empty for any environments. This means it
+    #wasn't hard-coded, and is using _ENV{DATABASE-SERVER} instead. Rather than
+    #leave it blank, we want to assign it the value "unset"
+    for (( i = 0 ; i < $number_of_environments ; i++ )) 
+    do
+
+        #when -u is set for bash, one valid way to test the existence of a
+        #variable, without getting an "unbound variable" error, is to set #default value to empty like this ${variable-e
+
+        if [ -z "${host_array[$i]-}" ]
+        then
+            db_host=${DATABASE_SERVER:=unset}
+
+            if [[ $db_host ]] 
+            then
+                host_array[$i]=$db_host
+            fi
+        fi
+
+    done
+
+    #env_array will be the final list of remote environments
+    declare -a env_array=()
+
+    #for each environment detected, let's test if it's local by checking if
+    #anything is set to "root". We're assuming no-one's using "root" as their remote
+    #login or password.
+    for (( i = 0 ; i < $number_of_environments ; i++ )) 
+    do
+
+        #add the current environment to the array
+        env_array[$i]=$i
+
+        #this will create array set_0, set_1, set_2 etc... which will reorganize all the grepped values into their respective environment
+        eval "declare -a "set_${i}"=( ${name_array[$i]} ${user_array[$i]} ${pass_array[$i]} ${host_array[$i]} )"
+
+        #because we're using arrays we have to use some indirect referencing trickery to iterate properly
+        _set="set_$i"[@]
+        set=( "${!_set}" )
+
+        #k is a separate counter to iterate through the four environment variables
+        k=0
+        for j in "${set[@]}"
+        do
+            #out of all the environments, let's set the default to 0
+            local_env=0
+            if [ $j == "root" ] 
+            then
+                #hopefully only one of the environments is using root as a login
+                local_env=$i
+            fi
+
+            #remove the local environment from the final array, so the user doesn't
+            #have to consider it.
+            unset env_array[$local_env]
+
+        done
+
+    done
+
     #Now that we've figured out which environment is the local one, let's set all
     #the variables to use for the local mysql operations
     local_env_ref_0=set_$local_env[0]
@@ -408,66 +485,17 @@ return_nonstandard () {
 
     local_chosen=true
 
-    #echo "============================================================" 
-    #echo " LOCAL DATABASE DETAILS" 
-    #echo "============================================================" 
-    #echo
-
-    #echo "local DB_NAME is:       $l_db_name"
-    #echo "local DB_USER is:       $l_db_user"
-    #echo "local DB_PASSWORD is:   $l_db_pass"
-    #echo "local DB_HOST is:       $l_db_host"
-    #echo
-
-    #Only prompt the user to pick the remote server if this function has been
-    #passed with the "remote" parameter set
-    if [[ $parameter == "remote" ]]
-    then
-
-        echo
-        #Now that we've narrowed down the possibilities of what might be a remote
-        #server, prompt the user to pick which one to synchronize
-        echo "Synchronize with which remote server?"
-        select m in "${env_array[@]}"
-        do
-
-            echo
-            echo "You chose Environment #$m as your remote server."
-            echo
-
-            remote_env=$m
-
-            #SyncDB will only use one set of remote environment variables, so set them
-            #here based on the user's choice
-            remote_env_ref_0=set_$remote_env[0]
-            remote_env_ref_1=set_$remote_env[1]
-            remote_env_ref_2=set_$remote_env[2]
-            remote_env_ref_3=set_$remote_env[3]
-
-            r_db_name=${!remote_env_ref_0}
-            r_db_user=${!remote_env_ref_1}
-            r_db_pass=${!remote_env_ref_2}
-            r_db_host=${!remote_env_ref_3:-$PHP_OUT}
-
-            echo "============================================================" 
-            echo " REMOTE DATABASE DETAILS" 
-            echo "============================================================" 
-            echo
-
-            echo "remote DB_NAME is:       $r_db_name"
-            echo "remote DB_USER is:       $r_db_user"
-            echo "remote DB_PASSWORD is:   $r_db_pass"
-            echo "remote DB_HOST is:       $r_db_host"
-
-            echo
-            # a flag which indicates whether the user has selected a remote environment already. This is so it doesn't pester the user repeatedly with this request.
-            remote_chosen=true
-            break
-
-        done
-
+    echo "============================================================" 
+    echo " LOCAL DATABASE DETAILS" 
+    echo "============================================================" 
     echo
-    fi
+
+    echo "local DB_NAME is:       $l_db_name"
+    echo "local DB_USER is:       $l_db_user"
+    echo "local DB_PASSWORD is:   $l_db_pass"
+    echo "local DB_HOST is:       $l_db_host"
+    echo
+
 }
 
 # ---------------------------------------------------------
@@ -528,21 +556,18 @@ get_remote_db_details () {
 
     #grep returns "filename.php:4" if there's 4 hits. We want to strip away
     #everything up to the colon and just save the number
-    number_of_environments=$(echo $number_of_environments | sed -e 's/.*://')
+    number_of_environments=$(echo $number_of_environments | sed 's/.*://')
+    echo no. of envs = $number_of_environments
     echo
 
     #This detects if there's anything weird going on in the config file. If there
     #are more than one instances of DB_USER, that's weird.
-    if [[ $number_of_environments < 2 ]]
+    if [[ $number_of_environments > 1 ]]
     then
+        return_remote_nonstandard
+    else
         return_remote_standard
-    elif [[ ${remote_chosen-} != "true" ]]
-    then
-        return_nonstandard remote
     fi
-
-    #Local paths
-    r_bak_name1=$now-$r_db_name.mssql 
 
 }
 
@@ -552,7 +577,7 @@ get_remote_db_details () {
 # ---------------------------------------------------------
 backup_remote_db () {
 
-    get_remote_db_details
+    check_if_chosen
 
     echo "${blue}Backing up remote database...$reset"
 
@@ -564,6 +589,8 @@ backup_remote_db () {
     fi
 
     cd $r_bak_dir
+
+    r_bak_name1=$now-$r_db_name.mssql 
 
     echo "mysqldump -u$r_db_user -p$r_db_pass -h $r_db_host $r_db_name | bzip2 -c > ${r_bak_name1}.bz2"
 
@@ -579,8 +606,9 @@ backup_remote_db () {
         echo
     fi
 
-    echo "cp ${r_bak_name1}.bz2 ${r_bak_name2}.bz2"
+    #echo "cp ${r_bak_name1}.bz2 ${r_bak_name2}.bz2"
     cp ${r_bak_name1}.bz2 ${r_bak_name2}.bz2
+    echo
 
 }
 
@@ -652,9 +680,10 @@ backup_local_db () {
         exit 1
     fi
 
+    #echo "cp ${l_bak_name1}.bz2 ${l_bak_name2}.bz2"
     echo
-    echo "cp ${l_bak_name1}.bz2 ${l_bak_name2}.bz2"
     cp ${l_bak_name1}.bz2 ${l_bak_name2}.bz2
+    echo
 }
 
 # ---------------------------------------------------------
@@ -744,11 +773,11 @@ upload_script () {
     echo
     if [[ "$difference" ]]
     then
-        echo "scp $scp_port./$(basename $0) $r_user@$r_host:~/$r_web_dir/"
+        echo "scp $scp_port$(basename $0) $config_file $r_user@$r_host:~/$r_web_dir/"
         echo
-        scp ${scp_port}./$(basename $0) $r_user@$r_host:~/$r_web_dir/
+        scp ${scp_port}$(basename $0) $config_file $r_user@$r_host:~/$r_web_dir/
         echo
-        echo "$green$msgSuccess$reset SyncDB script uploaded to: $r_web_dir/$(basename $0) (your local version was more recent)."
+        echo "$green$msgSuccess$reset Uploaded $(basename $0) and $config_file to: $r_web_dir."
     else
         echo "SyncDB script already exists on remote server."
     fi
@@ -760,11 +789,11 @@ upload_script () {
 
 
 # ---------------------------------------------------------
-# do_remote_bacup ()
+# do_remote_backup ()
 # Login to the remote server via SSH and call backup_remote_db(). Meant to be
 # run locally.
 # ---------------------------------------------------------
-do_remote_bacup () {
+do_remote_backup () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
@@ -800,7 +829,7 @@ upload_local_db () {
     echo
 
     #test whether the file was actually uploaded or not
-    echo "if ssh $ssh_port$r_user@$r_host test -e $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2" 
+    #echo "if ssh $ssh_port$r_user@$r_host test -e $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2" 
     if ssh ${ssh_port}"$r_user"@"$r_host" test -e "$r_web_dir"/"$r_bak_dir"/${l_bak_name2}.bz2 
     then
         echo
@@ -852,7 +881,7 @@ mysql_check_remote () {
 
     echo "${blue}Checking if the remote database was really emptied...$reset"
 
-    get_remote_db_details
+    check_if_chosen
 
     db_exists=$(mysql "-u$r_db_user" "-p$r_db_pass" -h "$r_db_host" -BNse "SHOW DATABASES LIKE '$r_db_name'" | grep $r_db_name)
 
@@ -873,13 +902,37 @@ mysql_check_remote () {
 }
 
 
+
+# ---------------------------------------------------------
+# check_if_chosen ()
+# Find out if the user has already been prompted to select a remote
+# configuration. This only applies for nonstandard wp-configs.
+# ---------------------------------------------------------
+check_if_chosen () {
+    
+    #After the first time the user has selected his remote environment, a
+    #temporary file is created which stores the remote database login values.
+    #This function sources those values from the temp file, rather than
+    #prompting the user again and recalculating.
+    if [ -f $temp_file ]
+    then
+        . $temp_file
+    fi
+
+    if [ "${remote_chosen:-}" != "true" ]
+    then
+        get_remote_db_details
+    fi
+
+}
+
 # ---------------------------------------------------------
 # replace_remote_db ()
 # Drop and recreate remote database.
 # ---------------------------------------------------------
 replace_remote_db () {
 
-    get_remote_db_details
+    check_if_chosen
 
     msg='Dropping remote database...'
     echo "$blue$msg$reset" 
@@ -955,7 +1008,7 @@ install_search_scripts () {
         if command -v wget >/dev/null 2>&1
         then
             echo "wget --no-check-certificate $searchScriptPath $cliScriptPath"
-            wget --no-check-certificate $searchScriptPath $cliScriptPath
+            wget -nv --no-check-certificate $searchScriptPath $cliScriptPath
         else
             if command -v curl >/dev/null 2>&1
             then
@@ -984,7 +1037,7 @@ install_search_scripts () {
 
 
 # ---------------------------------------------------------
-# search_replace_remote ()
+# search_replace_local ()
 # Install the Search and Replace Tools locally then execute them.
 # ---------------------------------------------------------
 search_replace_local () {
@@ -1006,6 +1059,28 @@ search_replace_local () {
     [[ "$l_db_host" == "localhost" ]] && l_db_host="127.0.0.1"
 
     cd $l_bak_dir
+
+    if [[ "$r_web_addr_alt" ]]
+    then
+        echo "You have specified more than one remote site URL. Please select which one you are presently trying to use as your search string."
+
+        options=("$r_web_addr" "$r_web_addr_alt")
+        select opt in "${options[@]}"
+        do
+            case $opt in
+                "$r_web_addr")
+                    echo "Your replace string is $r_web_addr."
+                    break
+                    ;;
+                "$r_web_addr_alt")
+                    echo "Your replace string is $r_web_addr_alt."
+                    break
+                    ;;
+                *) echo "Invalid option, please type 1 or 2.";;
+            esac
+        done
+
+    fi
 
     echo "./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p [password hidden for security] -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
 
@@ -1030,7 +1105,7 @@ do_search_replace_remote () {
 # ---------------------------------------------------------
 search_replace_remote () {
 
-    get_remote_db_details
+    check_if_chosen
 
     cd $HOME/$r_web_dir/$r_bak_dir
 
@@ -1039,7 +1114,14 @@ search_replace_remote () {
     echo
     echo "${blue}Search and replace database fields...$reset" 
 
-    my_php=$(which php)
+    if command -v which >/dev/null 2>&1
+    then
+        my_php=$(which php)
+    else
+        #if server does not have which installed, use the type command instead, combined with a sed command to strip off the "php is: " part
+        my_php=$(type -a php | sed 's/^[^/]*//g')
+    fi
+
     default_php=/usr/bin/php
 
     # replace the shebang line with custom php binary
@@ -1059,6 +1141,29 @@ search_replace_remote () {
 
     echo
 
+    if [[ "$r_web_addr_alt" ]]
+    then
+        echo "You have specified more than one remote site URL. Please select which one you are presently trying to use as your search string."
+
+        options=("$r_web_addr" "$r_web_addr_alt")
+        select opt in "${options[@]}"
+        do
+            case $opt in
+                "$r_web_addr")
+                    echo "Your replace string is $r_web_addr."
+                    break
+                    ;;
+                "$r_web_addr_alt")
+                    echo "Your replace string is $r_web_addr_alt."
+                    break
+                    ;;
+                *) echo "Invalid option, please type 1 or 2.";;
+            esac
+        done
+
+    fi
+
+
     echo "./$cliScriptName -h $r_db_host -u $r_db_user -n $r_db_name -p [password hidden for security] -c utf\-8 -s $l_web_addr -r $r_web_addr"
 
     ./$cliScriptName -h "$r_db_host" -u "$r_db_user" -n "$r_db_name" -p "$r_db_pass" -c utf\-8 -s "$l_web_addr" -r "$r_web_addr"
@@ -1071,6 +1176,14 @@ search_replace_remote () {
 
     # for security purposes, delete search scripts 
     rm "$cliScriptName" "$searchScriptName"
+
+    # delete the temp file as well
+    cd ..
+
+    if [ -f $temp_file ]
+    then
+        rm $temp_file
+    fi
 
 }
 
@@ -1137,7 +1250,7 @@ push () {
 
     upload_script
 
-    do_remote_bacup
+    do_remote_backup
 
     do_remote_replace
 
@@ -1161,7 +1274,7 @@ pull () {
 
     upload_script
 
-    do_remote_bacup
+    do_remote_backup
 
     download_remote_db
 
@@ -1190,7 +1303,7 @@ echo
 if [ $# -ne 0 ]
 then
     # place all the command names in an array
-    declare -a list_of_methods=(help upload_local_db get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_replace do_search_replace_remote rsync_push do_remote_bacup upload_script test_ssh)
+    declare -a list_of_methods=(help upload_local_db get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_replace do_search_replace_remote rsync_push do_remote_backup upload_script test_ssh)
 
     # function to check if an item exists in an array
     contains_element () {
@@ -1207,16 +1320,16 @@ then
     if [[ $? -eq 1 ]]
     then 
         echo ${red}Error:$reset Command not found: ${yellow}"$@"$reset
-        echo
 
         help
     fi
 
 fi
 
+
+
 # script will execute whichever method is passed to it as an argument.
 # The default is to run the `push` method.
 ${@:-push}
-
 
 exit 
