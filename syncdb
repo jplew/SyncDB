@@ -2,7 +2,7 @@
 
 # ***********************************************
 #
-# syncDB v0.2.5
+# syncDB v0.3
 # by JP Lew (jplew.com)
 #
 # ***********************************************
@@ -1296,7 +1296,7 @@ pull () {
 # ====================================
 
 echo
-echo "${blue}SyncDB v0.2.4$reset > $yellow${@:-push}$reset"
+echo "${blue}SyncDB v0.3$reset > $yellow${@:-push}$reset"
 echo
 
 # if an argument is passed (the number of arguments is not equal to zero), then check if that command is valid or not.
