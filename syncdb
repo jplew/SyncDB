@@ -1040,9 +1040,11 @@ search_replace_local () {
 
     install_search_scripts
 
-    echo "$blue}Search and replace database fields.$reset"
+    echo "${blue}Search and replace database fields.$reset"
 
     get_local_db_details
+
+    cd $l_site_dir/$l_bak_dir
 
     # If $l_db_host is set to localhost, the CLI script will fail. The reason
     # is that "localhost" is a special name for the mysql driver making it use
