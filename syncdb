@@ -197,7 +197,7 @@ get_local_db_details () {
         return_local_standard
     elif [[ ${local_chosen-} != "true" ]]
     then
-        return_nonstandard local
+        return_local_nonstandard
     fi
 
     #Local paths
@@ -213,7 +213,6 @@ get_local_db_details () {
 # This function collects all the login info it can find, organizes it into
 # sets, auto-detects which one is the local set, and if necessary asks the user
 # which remote server they want to sync with. 
-# This function accepts a parameter, either 'local' or 'remote'. 
 # ---------------------------------------------------------
 return_remote_nonstandard () {
 
@@ -389,21 +388,18 @@ EOT
 
 # ---------------------------------------------------------
 # return_local_nonstandard ()
-# Some wp-config files have multiple sets of configuration variables, one
-# for each environment (local, dev, production/live etc...). 
-# This function collects all the login info it can find, organizes it into
-# sets, auto-detects which one is the local set, and if necessary asks the user
-# which remote server they want to sync with. 
-# This function accepts a parameter, either 'local' or 'remote'. 
+# If multiple environments are specified in the same wp-config file, this
+# function extracts the set of parameters it feels correspond to the local
+# environment.
 # ---------------------------------------------------------
 return_local_nonstandard () {
 
     #grep the config file for all relevants hits, and saves them to their
     #respective category. All hits are delimited by spaces.
-    all_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" $local_config_file)
-    all_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" $local_config_file)
-    all_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" $local_config_file)
-    all_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" $local_config_file)
+    all_db_name=$(sed -n "s/.*DB_NAME', '\([^']*\)'.*/\1/p" wp-config.php)
+    all_db_user=$(sed -n "s/.*DB_USER', '\([^']*\)'.*/\1/p" wp-config.php)
+    all_db_pass=$(sed -n "s/.*DB_PASSWORD', '\([^']*\)'.*/\1/p" wp-config.php)
+    all_db_host=$(sed -n "s/.*DB_HOST', '\([^']*\)'.*/\1/p" wp-config.php)
 
     #This splits the previous values into arrays
     name_array=(${all_db_name// / })
@@ -418,16 +414,14 @@ return_local_nonstandard () {
     do
 
         #when -u is set for bash, one valid way to test the existence of a
-        #variable, without getting an "unbound variable" error, is to set #default value to empty like this ${variable-e
+        #variable, without getting an "unbound variable" error, is to set
+        #default value to empty like this ${variable-}
 
         if [ -z "${host_array[$i]-}" ]
         then
             db_host=${DATABASE_SERVER:=unset}
 
-            if [[ $db_host ]] 
-            then
-                host_array[$i]=$db_host
-            fi
+            [[ $db_host ]] && host_array[$i]=$db_host
         fi
 
     done
