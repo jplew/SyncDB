@@ -1035,10 +1035,8 @@ install_search_scripts () {
 # Install the Search and Replace Tools locally then execute them.
 # ---------------------------------------------------------
 search_replace_local () {
-    #
-    # Search and replacing fields
-    #
-    cd $l_bak_dir
+
+    cd $l_site_dir/$l_bak_dir
 
     install_search_scripts
 
@@ -1052,7 +1050,6 @@ search_replace_local () {
     # solution is to swap localhost for 127.0.0.1.
     [[ "$l_db_host" == "localhost" ]] && l_db_host="127.0.0.1"
 
-    cd $l_bak_dir
 
     if [[ "$r_web_addr_alt" ]]
     then
@@ -1064,10 +1061,12 @@ search_replace_local () {
             case $opt in
                 "$r_web_addr")
                     echo "Your replace string is $r_web_addr."
+                    $r_web_addr=$r_web_addr
                     break
                     ;;
                 "$r_web_addr_alt")
                     echo "Your replace string is $r_web_addr_alt."
+                    $r_web_addr=$r_web_addr_alt
                     break
                     ;;
                 *) echo "Invalid option, please type 1 or 2.";;
@@ -1145,10 +1144,12 @@ search_replace_remote () {
             case $opt in
                 "$r_web_addr")
                     echo "Your replace string is $r_web_addr."
+                    $r_web_addr=$r_web_addr
                     break
                     ;;
                 "$r_web_addr_alt")
                     echo "Your replace string is $r_web_addr_alt."
+                    $r_web_addr=$r_web_addr_alt
                     break
                     ;;
                 *) echo "Invalid option, please type 1 or 2.";;
