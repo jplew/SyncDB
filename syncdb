@@ -5,6 +5,11 @@
 # syncDB v0.3
 # by JP Lew (jplew.com)
 #
+# SyncDB is bash deploy script meant to take the tedium out of synchronizing
+# the local and remote versions of a Wordpress site. It allows developers
+# working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes
+# to or from the production server with a single command. 
+#
 # ***********************************************
 
 config_file=syncdb-config
@@ -19,7 +24,6 @@ else
     echo "${red}$msgError$reset: Could not locate $config_file."
     exit 1
 fi
-
 
 # ========================================
 #  OPTIONAL VARIABLES (you almost certainly won't have to touch these)
@@ -40,7 +44,7 @@ l_site_dir=${PWD}
 # but with the preceding directory path stripped off).
 l_web_dir=${PWD##*/}
 
-# Path expansions. You likely leave these as-is.
+# Path expansions.
 l_bak_path2=$l_site_dir/$l_bak_dir/$l_bak_name2
 l_upload_path=$l_site_dir/$l_upload_dir
 r_upload_path=$r_web_dir/$r_upload_dir
@@ -119,6 +123,7 @@ cat <<EOF
     • rsync_pull
     • rsync_push
     • search_replace_local
+    • search_replace_remote
     • test_ssh
     • upload_local_db
     • upload_script
@@ -150,7 +155,6 @@ test_ssh () {
     fi
 }
 
-
 # ---------------------------------------------------------
 # get_local_db_details ()
 # Extract the local database details from wp-config.php
@@ -158,7 +162,7 @@ test_ssh () {
 get_local_db_details () {
 
     echo 
-    echo "${blue}Fetching local database login details...$reset"
+    #echo "${blue}Fetching local database login details...$reset"
 
     # Change directory to site root (where local-config.php and wp-config.php are located)
     if [ ! -d $l_site_dir ] ; then
@@ -186,7 +190,7 @@ get_local_db_details () {
     #This tells us how many times DB_USER has been set in the config file.
     number_of_environments=$(grep -c "'DB_USER', '[^']*'.*" $local_config_file)
 
-    #grep returns "filename.php:4" if there's 4 hits. We want to strip away
+    #grep returns "filename.php:3" if there's 3 hits. We want to strip away
     #everything up to the colon and just save the number
     number_of_environments=$(echo $number_of_environments | sed -e 's/.*://')
 
@@ -421,7 +425,6 @@ return_local_nonstandard () {
         then
             db_host=${DATABASE_SERVER:=unset}
 
-            [[ $db_host ]] && host_array[$i]=$db_host
         fi
 
     done
@@ -1040,18 +1043,44 @@ search_replace_local () {
 
     install_search_scripts
 
-    echo "${blue}Search and replace database fields.$reset"
+    echo "${blue}Search and replace database fields...$reset"
+
+    if command -v which >/dev/null 2>&1
+    then
+        my_php=$(which php)
+    else
+        #if server does not have which installed, use the type command instead, combined with a sed command to strip off the "php is: " part
+
+        my_php=$(type -a php | sed 's/^[^/]*//g')
+    fi
+
+    default_php=/usr/bin/php
+
+    # replace the shebang line with custom php binary
+    if [[ "$my_php" != "$default_php" ]]
+    then
+
+        echo "${yellow}PHP Binary:$reset Your local server uses $my_php"
+
+        old_shebang=$(sed -n 1p "${cliScriptName}")
+        sed -i "1c #!${my_php} -q" ${cliScriptName}
+
+        echo "Shebang line changed from ${yellow}${old_shebang}$reset to $yellow#!${my_php} -q$reset"
+        echo
+    else
+        echo "${yellow}PHP Binary:$reset Your server uses the default $default_php"
+    fi
+
 
     get_local_db_details
-
-    cd $l_site_dir/$l_bak_dir
 
     # If $l_db_host is set to localhost, the CLI script will fail. The reason
     # is that "localhost" is a special name for the mysql driver making it use
     # the unix socket to connect to mysql instead of the tcp socket. A simple
     # solution is to swap localhost for 127.0.0.1.
-    [[ "$l_db_host" == "localhost" ]] && l_db_host="127.0.0.1"
+    #[[ "$l_db_host" == "localhost" ]] && l_db_host="127.0.0.1"
 
+    cd $l_bak_dir
 
     if [[ "$r_web_addr_alt" ]]
     then
@@ -1300,7 +1329,7 @@ echo
 if [ $# -ne 0 ]
 then
     # place all the command names in an array
-    declare -a list_of_methods=(help upload_local_db get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_replace do_search_replace_remote rsync_push do_remote_backup upload_script test_ssh)
+    declare -a list_of_methods=(help upload_local_db get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_replace do_search_replace_remote rsync_push do_remote_backup upload_script test_ssh install_search_scripts)
 
     # function to check if an item exists in an array
     contains_element () {
