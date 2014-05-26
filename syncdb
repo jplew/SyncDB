@@ -424,7 +424,7 @@ return_local_nonstandard () {
         if [ -z "${host_array[$i]-}" ]
         then
             db_host=${DATABASE_SERVER:=unset}
-
+            [[ $db_host ]] && host_array[$i]=$db_host
         fi
 
     done
@@ -442,7 +442,7 @@ return_local_nonstandard () {
         env_array[$i]=$i
 
         #this will create array set_0, set_1, set_2 etc... which will reorganize all the grepped values into their respective environment
-        eval "declare -a "set_${i}"=( ${name_array[$i]} ${user_array[$i]} ${pass_array[$i]} ${host_array[$i]} )"
+        eval "declare -a "set_${i}"=( ${name_array[$i]} ${user_array[$i]} ${pass_array[$i]} ${host_array[$i]:-} )"
 
         #because we're using arrays we have to use some indirect referencing trickery to iterate properly
         _set="set_$i"[@]
