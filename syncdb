@@ -948,15 +948,15 @@ EOF
 
     else
         # otherwise do this if `drop database` is not available
-        sql_show="show databases; create database if not exists $r_db_name >/dev/null 2>&1;"
+        sql_show="show databases; create database if not exists $r_db_name;"
 
         echo "mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bse $sql_show"
 
-        mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bse "$sql_show"  
+        mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bse "$sql_show" >/dev/null 2>&1
 
-        echo "mysql --silent --skip-column-names -u $r_db_user -p$r_db_user $r_db_host -e "show tables" | gawk '{print "drop table " $1 ";"}' | mysql -u $r_db_user -p$r_db_user $r_db_host"
+        echo "mysql --silent --skip-column-names -u $r_db_user -p$r_db_pass $r_db_host -e "show tables" | gawk '{print "drop table " $1 ";"}' | mysql -u $r_db_user -p$r_db_pass $r_db_host"
 
-        mysql -u $r_db_user -p$r_db_user $r_db_host -sNe "show tables" | gawk '{print "drop table " $1 ";"}' | mysql -u $r_db_user -p$r_db_user $r_db_host
+        mysql -u $r_db_user -p$r_db_pass $r_db_host -sNe "show tables" | gawk '{print "drop table " $1 ";"}' | mysql -u $r_db_user -p$r_db_pass $r_db_host
 
         sql_create="create database $r_db_name"
         mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bse "$sql_create"
@@ -1071,7 +1071,6 @@ search_replace_local () {
         echo "${yellow}PHP Binary:$reset Your server uses the default $default_php"
     fi
 
-
     get_local_db_details
 
     # If $l_db_host is set to localhost, the CLI script will fail. The reason
@@ -1109,7 +1108,6 @@ search_replace_local () {
     echo "./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p [password hidden for security] -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
 
     ./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" 
-
 
 }
 
@@ -1189,8 +1187,7 @@ search_replace_remote () {
 
     fi
 
-
-    echo "./$cliScriptName -h $r_db_host -u $r_db_user -n $r_db_name -p [password hidden for security] -c utf\-8 -s $l_web_addr -r $r_web_addr"
+    echo "./$cliScriptName -h $r_db_host -u $r_db_user -n $r_db_name -p [password hidden] -c utf\-8 -s $l_web_addr -r $r_web_addr"
 
     ./$cliScriptName -h "$r_db_host" -u "$r_db_user" -n "$r_db_name" -p "$r_db_pass" -c utf\-8 -s "$l_web_addr" -r "$r_web_addr"
 
@@ -1351,8 +1348,6 @@ then
     fi
 
 fi
-
-
 
 # script will execute whichever method is passed to it as an argument.
 # The default is to run the `push` method.
