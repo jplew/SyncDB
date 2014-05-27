@@ -1,4 +1,4 @@
-SyncDB v0.3
+SyncDB v0.3.1
 ===========
 
 SyncDB is bash deploy script meant to take the tedium out of synchronizing local and remote versions of a Wordpress site. It allows developers working in a local environment (eg. MAMP) to rapidly "push" or "pull" changes to or from their production server with a single terminal command. 
@@ -12,7 +12,6 @@ After initial script configuration, you'll be able to migrate your entire Wordpr
     ./syncdb
 
 No more FTP programs, no more PHPMyAdmin, no more tears. SyncDB don't mess around.
-
 
 
 ## Usage
@@ -39,8 +38,6 @@ To **pull**, run:
     ./syncdb pull
 
 For finer control, you can tell SyncDB to execute only the command of your choosing by passing the function name as an argument. See **List of Commands** below.
-
-
 
 
 ## List of Commands
@@ -76,6 +73,9 @@ All commands are meant to be executed locally, unless noted with *(remote only)*
 
    + help
      + prints a list of all SyncDB commands.
+
+   + auto_update
+     + Checks if a newer version of SyncDB exists on Github, and if there is, prompts the user to download it.
 
    + test_ssh
      + Check if the SSH connection is working.
@@ -124,7 +124,6 @@ All commands are meant to be executed locally, unless noted with *(remote only)*
 
 
 ## Complete workflow
-
 
 I wrote this script due to my recurring need to migrate Wordpress sites. I required a workflow which would automate the process as much as possible, with minimal intervention. This script, therefore, plays one part in my overall Wordpress development workflow. Below is my set-up:
 
@@ -184,6 +183,12 @@ Easy!
 
 ## Changelog
 
+v0.3.1 (May 27, 2014)
+----
+ * Command added: auto_update. For the sake of convenience, SyncDB now automatically checks whether a new version is available and downloads it on the spot. This functionality can be disabled by setting auto_update to false in syncdb-config. Note: to take advantage of this feature you have to use the updated syncdb-config template.
+ * Fixed bug preventing no_drop users (those without MySQL DROP privileges) from dropping their remote database correctly. Thanks to [@marcobarbosa](https://github.com/marcobarbosa)
+ * Fixed bug which broke search_replace_local in some circumstances. The Search and Replace CLI script, in its shebang line, defaults to /usr/bin/php, but MAMP users for example need to use their own binary. If you use any PHP binary besides the default /usr/bin/php, make sure it is in your PATH, otherwise your local search and replace will fail (go `which php` to find out).
+
 v0.3 (May 22, 2014)
 ----
  * SyncDB now supports wp-config.php files with multiple environments. For example [WordPress-Config-Bootstrap](<https://github.com/Abban/WordPress-Config-Bootstrap>)
@@ -218,9 +223,12 @@ v0.1 (Oct 2013)
 
 ## Feedback & Bugs
 
+SyncDB may be a little edgy—it has not seen a broad range of use cases. There are billions of possible configurations—depending on your OS, your Wordpress configuration, your hosting company etc...—SyncDB tries to accommodate the most common ones. We're committed to making it as robust as possible, so if something's not working please submit an issue.
 
-SyncDB may be a little edgy—it has not seen a broad range of use cases. I have used it to good effect between my machine and numerous shared hosting plans, ranging from the good (Dreamhost), the bad (HostGator), and the ugly (GoDaddy). 
+SyncDB is presently compatible with Wordpress, but in principle should work with Drupal, Joomla, etc... Right now it scrapes the wp-config.php file for database login info. All that would be required to support those other CMS's would be to specify the config file and `grep` it accordingly.
 
-It is presently compatible with Wordpress, but in principle it should work with Drupal, Joomla, etc... Right now it scrapes the wp-config.php file for database login credentials. All that would be required to support those other CMS's would be to modify the config file and the `sed` command accordingly.
+Suggestions and pull-requests are welcome.
 
-Bug reports, suggestions, and pull-requests are welcome.
+## Disclaimer
+
+We accept no responsibility for any data loss suffered from the use of SyncDB. Use at your own risk. SyncDB explicitly backs up your SQL databases before making any changes, but you'll need basic familiarity with the shell in order to revert things should anything go awry.
