@@ -2,7 +2,7 @@
 
 # ***********************************************
 #
-# syncDB v0.3
+# syncDB v0.3.1
 # by JP Lew (jplew.com)
 #
 # SyncDB is bash deploy script meant to take the tedium out of synchronizing
@@ -15,15 +15,21 @@
 config_file=syncdb-config
 temp_file=syncdb-temp
 
-
 if [[ -f $config_file  ]]
 then
-    #source the config_file
+    #source the config file
     . $config_file
 else
     echo "${red}$msgError$reset: Could not locate $config_file."
     exit 1
 fi
+
+if [[ -f $temp_file ]]
+then
+    #source the temp file. The temp file is used once per "session". It serves to avoid prompting the user for questions they've already answered. It is created during the first prompt, then deleted after the search and replace.
+    . $temp_file
+fi
+
 
 # ========================================
 #  OPTIONAL VARIABLES (you almost certainly won't have to touch these)
@@ -90,12 +96,12 @@ today=$(date +"%y%m%d")
 now=$(date +"%y%m%d-%H%M")
 
 # Search-Replace-DB
-searchScriptName=srdb.class.php
-cliScriptName=srdb.cli.php
-srdbPath=https://raw.githubusercontent.com/interconnectit/Search-Replace-DB/master/
-searchScriptPath=$srdbPath$searchScriptName
-cliScriptPath=$srdbPath$cliScriptName
-
+search_script_name=srdb.class.php
+cli_script_name=srdb.cli.php
+srdb_path=https://raw.githubusercontent.com/interconnectit/Search-Replace-DB/master/
+search_script_path=$srdb_path$search_script_name
+cli_script_path=$srdb_path$cli_script_name
+syncdb_path=https://raw.githubusercontent.com/jplew/SyncDB/master/syncdb
 # initialize variable. Used because we need to test the SSH connection only once.
 checked=
 
@@ -112,18 +118,22 @@ help () {
 cat <<EOF
     ${blue}SyncDB List of Commands$reset
 
+    • auto_update
     • backup_local_db
+    • backup_remote_db (remote only)
     • do_remote_backup
     • do_remote_replace
     • do_search_replace_remote
     • download_remote_db
-    • push
+    • help
     • pull
+    • push
     • replace_local_db
+    • replace_remote_db (remote only)
     • rsync_pull
     • rsync_push
     • search_replace_local
-    • search_replace_remote
+    • search_replace_remote (remote only)
     • test_ssh
     • upload_local_db
     • upload_script
@@ -131,6 +141,81 @@ cat <<EOF
 EOF
 
     exit 0
+}
+
+
+# ---------------------------------------------------------
+# auto_update ()
+# Check if the github hosted version of SyncDB is newer (different) from this
+# version. If so, it will download the newer one and ask the user to relaunch.
+# This function is enabled by default, but can be disabled by changing
+# auto_update=false in syncdb-config.
+# ---------------------------------------------------------
+auto_update () {
+
+    if command -v curl >/dev/null 2>&1
+    then
+        curl_exists=true
+    else
+        if command -v wget >/dev/null 2>&1
+        then
+            wget_exists=true
+        else
+            echo >&2 "${red}$msgError$reset Could not run auto-update, your system has neither curl nor wget installed."
+        fi
+    fi
+
+    echo "${blue}Checking for updates to SyncDB...$reset"
+
+    #run a diff command to test the difference between the github syncdb versus
+    #the local one. We use basename rather than hard-coding the filename,
+    #syncdb, in case the user is using a different name, eg. syncdb-live,
+    #mysyncdb, etc...
+    needs_updating=$(diff <(curl -s $syncdb_path) ./$(basename $0))
+
+    if [[ "$needs_updating" ]]
+    then
+        echo "There is a newer version of SyncDB available. Would you like to update?"
+        OPTIONS="Yes No"
+        select opt in $OPTIONS
+        do
+            echo
+            case $opt in
+                "Yes")
+                    echo "Downloading newer verson of SyncDB..."
+                    #backup the old syncdb, just in case
+                    cp $(basename $0) $(basename $0).bak
+
+                    if [[ ${curl_exists-} ]]
+                    then
+                        #-s is silent mode, -o specifies a filename of your choosing
+                        curl -s $syncdb_path -o $(basename $0)
+                    elif [[ ${wget_exists-} ]]
+                    then
+                        #-q is quiet mode, -O specifies the filename
+                        wget -q --no-check-certificate -O $(basename $0) $syncdb_path
+                    fi
+
+                    echo "${green}${msgSuccess}$reset Update complete. Please relaunch SyncDB."
+                    echo
+                    break
+                    ;;
+                "No")
+                    echo "You chose not to update. To disable auto-updating, set auto_update=false in syncdb-config."
+                    echo
+                    break
+                    ;;
+                *) echo "Invalid option, please type 1 or 2.";;
+            esac
+        done
+    else
+        echo "Your version of SyncDB is up-to-date."
+    fi
+
+    cat <<EOT > $temp_file
+auto_update_checked=true
+EOT
+
 }
 
 # ---------------------------------------------------------
@@ -142,6 +227,7 @@ test_ssh () {
     echo
     echo "ssh -q $ssh_port$r_user@$r_host exit"
 
+    #first test method
     ssh -q $ssh_port$r_user@$r_host exit
 
     if [ $? == 0 ] # check if the SSH connection is working
@@ -150,9 +236,26 @@ test_ssh () {
         echo "${green}${msgSuccess}$reset SSH connection is working."
         echo
     else
-        echo "$red$msgError$reset could not connect to host. Confirm that the SSH connection, $yellow$r_user$reset@$yellow$r_host$reset, is working."
+        echo "Test failed. Trying again..."
+        echo "ssh -q -o BatchMode=yes -o ConnectTimeout=5 ${ssh_port}$r_user@$r_host echo ok 2>&1"
+        return_code=$(ssh -q -o BatchMode=yes -o ConnectTimeout=5 ${ssh_port}$r_user@$r_host echo ok 2>&1)
+        #echo return code is $return_code
+
+        #second test method, in case first one fails. For some reason a
+        #functioning Arvixe connection returns an error code of 1 for the above
+        #test, even if it's working
+        if [[ $return_code == 'ok' ]] # check if the SSH connection is working
+        then
+            echo
+            echo "${green}${msgSuccess}$reset SSH connection is working."
+        else
+            echo "$red$msgError$reset could not connect to host. Confirm that the SSH connection, $yellow$r_user$reset@$yellow$r_host$reset, is working."
         exit 1
+        fi
     fi
+
+    echo
+
 }
 
 # ---------------------------------------------------------
@@ -373,7 +476,7 @@ return_remote_nonstandard () {
         # a flag which indicates whether the user has selected a remote environment already. This is so it doesn't pester the user repeatedly with this request.
         remote_chosen=true
 
-        cat <<EOT > $temp_file
+        cat <<EOT >> $temp_file
 r_db_name=${!remote_env_ref_0}
 r_db_user=${!remote_env_ref_1}
 r_db_pass=${!remote_env_ref_2}
@@ -531,7 +634,7 @@ return_remote_standard () {
 # ---------------------------------------------------------
 get_remote_db_details () {
 
-    echo "${blue}Fetching remote database login details...$reset"
+    #echo "${blue}Fetching remote database login details...$reset"
 
     # Change directory to site root (where local-config.php and wp-config.php are located)
     if [ ! -d $r_site_dir ] ; then
@@ -554,7 +657,7 @@ get_remote_db_details () {
     #grep returns "filename.php:4" if there's 4 hits. We want to strip away
     #everything up to the colon and just save the number
     number_of_environments=$(echo $number_of_environments | sed 's/.*://')
-    echo no. of envs = $number_of_environments
+    #echo no. of envs = $number_of_environments
     echo
 
     #This detects if there's anything weird going on in the config file. If there
@@ -625,11 +728,11 @@ download_remote_db () {
 
     cd $l_bak_dir
 
-    echo "scp $scp_port$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 ."
+    echo "scp -q $scp_port$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 ."
 
     set -o pipefail
 
-    scp "$scp_port"$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
+    scp -q "$scp_port"$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
 
     if [ $? == 0 -a -f ${r_bak_name2}.bz2 ]; then
         echo
@@ -757,29 +860,42 @@ do_check_for_dirs () {
 upload_script () {
 
     echo "${blue}Uploading sync script...$reset"
-    echo
 
     cd "$l_site_dir"
 
     # check if we've already checked the remote path structure. If not, check now
     [[ "$checked" ]] || do_check_for_dirs
 
-    # Compare the local version of SyncDB with the remote version. If there's a difference, upload and write over the remote one.
-    difference=$(ssh $ssh_port$r_user@$r_host cat $r_web_dir/$r_bak_dir/$(basename $0) 2>/dev/null | diff ./$(basename $0) - )
 
-    echo
-    if [[ "$difference" ]]
+    #NOTE: SyncDB used to check if there was any difference between the remote version of syncdb and the local one, for the sake of performance. This part has been commented out for now, because I think we need to upload the temp_file every time, at least.
+
+    # Compare the local version of SyncDB with the remote version. If there's a difference, upload and write over the remote one.
+    #difference=$(ssh $ssh_port$r_user@$r_host cat $r_web_dir/$r_bak_dir/$(basename $0) 2>/dev/null | diff ./$(basename $0) - )
+
+    #echo
+    #if [[ "$difference" ]]
+    #then
+        #echo "scp -q $scp_port$(basename $0) $config_file $r_user@$r_host:~/$r_web_dir/"
+        #echo
+        #scp -q ${scp_port}$(basename $0) $config_file $r_user@$r_host:~/$r_web_dir/
+        #echo
+        #echo "$green$msgSuccess$reset Uploaded $(basename $0) and $config_file to: $r_web_dir."
+    #else
+        #echo "SyncDB script already exists on remote server."
+    #fi
+
+    #we only need to upload the temp_file if it exists.
+    if [[ -f $temp_file ]]
     then
-        echo "scp $scp_port$(basename $0) $config_file $r_user@$r_host:~/$r_web_dir/"
-        echo
-        scp ${scp_port}$(basename $0) $config_file $r_user@$r_host:~/$r_web_dir/
-        echo
-        echo "$green$msgSuccess$reset Uploaded $(basename $0) and $config_file to: $r_web_dir."
-    else
-        echo "SyncDB script already exists on remote server."
+        upload_temp=$temp_file
     fi
 
+    echo "scp -q $scp_port$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:~/$r_web_dir/"
     echo
+    scp -q ${scp_port}$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:~/$r_web_dir/
+    echo
+    echo "$green$msgSuccess$reset Uploaded $(basename $0) and $config_file to: $r_web_dir."
+
     echo
 
 }
@@ -794,8 +910,8 @@ do_remote_backup () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
-    echo "ssh -t $ssh_port$r_user@$r_host cd $r_web_dir; chmod +x $(basename $0); ./$(basename $0) backup_remote_db;"
-    ssh -t $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) backup_remote_db;"
+    echo "ssh -qt $ssh_port$r_user@$r_host cd $r_web_dir; chmod +x $(basename $0); ./$(basename $0) backup_remote_db;"
+    ssh -qt $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) backup_remote_db;"
 
 }
 
@@ -815,8 +931,8 @@ upload_local_db () {
 
     if [[ -f "${l_bak_path2}.bz2" ]]
     then
-        echo "scp $scp_port${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir"
-        scp ${scp_port}${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir
+        echo "scp -q $scp_port${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir"
+        scp -q ${scp_port}${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir
     else
         echo "$red$msgError$reset Could not locate the local dump file at $(pwd)/${l_bak_name2}.bz2."
         echo
@@ -827,7 +943,7 @@ upload_local_db () {
 
     #test whether the file was actually uploaded or not
     #echo "if ssh $ssh_port$r_user@$r_host test -e $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2" 
-    if ssh ${ssh_port}"$r_user"@"$r_host" test -e "$r_web_dir"/"$r_bak_dir"/${l_bak_name2}.bz2 
+    if ssh -q ${ssh_port}"$r_user"@"$r_host" test -e "$r_web_dir"/"$r_bak_dir"/${l_bak_name2}.bz2 
     then
         echo
         echo "$green$msgSuccess$reset Dump file uploaded to: $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2"
@@ -898,8 +1014,6 @@ mysql_check_remote () {
     fi
 }
 
-
-
 # ---------------------------------------------------------
 # check_if_chosen ()
 # Find out if the user has already been prompted to select a remote
@@ -911,12 +1025,8 @@ check_if_chosen () {
     #temporary file is created which stores the remote database login values.
     #This function sources those values from the temp file, rather than
     #prompting the user again and recalculating.
-    if [ -f $temp_file ]
-    then
-        . $temp_file
-    fi
 
-    if [ "${remote_chosen:-}" != "true" ]
+    if [[ "${remote_chosen:-}" != "true" ]]
     then
         get_remote_db_details
     fi
@@ -931,14 +1041,18 @@ replace_remote_db () {
 
     check_if_chosen
 
-    msg='Dropping remote database...'
-    echo "$blue$msg$reset" 
+    echo "${blue}Dropping remote database...$reset" 
 
     echo
 
     if [[ ! "$no_drop" ]]
     then
 
+        echo "mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bs<<EOF >/dev/null 2>&1
+        create database if not exists $r_db_name;
+        drop database $r_db_name;
+        create database $r_db_name;
+EOF"
         # do this if the standard `drop database` command is available
         mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bs<<EOF >/dev/null 2>&1
         create database if not exists $r_db_name;
@@ -954,12 +1068,10 @@ EOF
 
         mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bse "$sql_show" >/dev/null 2>&1
 
-        echo "mysql --silent --skip-column-names -u $r_db_user -p$r_db_pass $r_db_host -e "show tables" | gawk '{print "drop table " $1 ";"}' | mysql -u $r_db_user -p$r_db_pass $r_db_host"
-
-        mysql -u $r_db_user -p$r_db_pass $r_db_host -sNe "show tables" | gawk '{print "drop table " $1 ";"}' | mysql -u $r_db_user -p$r_db_pass $r_db_host
+        mysql -u $r_db_user -p$r_db_pass -h $r_db_host $r_db_name -sNe "show tables" | gawk -v drop_command="drop table " '{print drop_command $1";"}' | mysql -u $r_db_user -p$r_db_pass -h $r_db_host $r_db_name
 
         sql_create="create database $r_db_name"
-        mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bse "$sql_create"
+        mysql -u$r_db_user -p$r_db_pass -h $r_db_host --show-warnings -Bse "$sql_create" >/dev/null 2>&1
 
     fi
 
@@ -986,52 +1098,49 @@ EOF
     echo
 }
 
-
 # ---------------------------------------------------------
 # install_search_scripts ()
 # Check if wget or curl commands exit, then download the Search and Replace scripts.
 # ---------------------------------------------------------
 install_search_scripts () {
 
-    pwd
     echo "${blue}Installing search and replace scripts...$reset"
     echo
 
-    if [ ! -f "$searchScriptName" -o ! -f "$cliScriptName" ] 
+    if [ ! -f "$search_script_name" -o ! -f "$cli_script_name" ] 
     then 
-        echo "${blue}Downloading $searchScriptName and $cliScriptName...$reset"
+        echo "${blue}Downloading $search_script_name and $cli_script_name...$reset"
         echo
 
         if command -v wget >/dev/null 2>&1
         then
-            echo "wget --no-check-certificate $searchScriptPath $cliScriptPath"
-            wget -nv --no-check-certificate $searchScriptPath $cliScriptPath
+            echo "wget -q --no-check-certificate $search_script_path $cli_script_path"
+            wget -q --no-check-certificate $search_script_path $cli_script_path
         else
             if command -v curl >/dev/null 2>&1
             then
-                echo "curl -O $searchScriptPath -O $cliScriptPath"
-                curl -O $searchScriptPath -O $cliScriptPath
+                echo "curl -O $search_script_path -O $cli_script_path"
+                curl -O $search_script_path -O $cli_script_path
             else
                 echo >&2 "${red}$msgError$reset Installation of Search and Replace Tool requires wget or curl, which appear to be missing. Exiting."
                 exit 1
             fi
         fi
 
-        if [ -f "$searchScriptName" -a -f "$cliScriptName" ]
+        if [ -f "$search_script_name" -a -f "$cli_script_name" ]
         then
             echo
-            echo "${green}$msgSuccess$reset $searchScriptName and $cliScriptName downloaded to $(pwd)."
-            echo "chmod a+x $searchScriptName $cliScriptName"
-            chmod a+x $searchScriptName $cliScriptName
+            echo "${green}$msgSuccess$reset $search_script_name and $cli_script_name downloaded to $(pwd)."
+            #echo "chmod a+x $search_script_name $cli_script_name"
+            chmod a+x $search_script_name $cli_script_name
         else
             echo
             echo
-            echo >&2 "${red}$msgError$reset Search and Replace Tool download failed. Could not find $searchScriptName and $cliScriptName in $(pwd). Exiting."
+            echo >&2 "${red}$msgError$reset Search and Replace Tool download failed. Could not find $search_script_name and $cli_script_name in $(pwd). Exiting."
             exit 1
         fi
     fi
 }
-
 
 # ---------------------------------------------------------
 # search_replace_local ()
@@ -1062,8 +1171,8 @@ search_replace_local () {
 
         echo "${yellow}PHP Binary:$reset Your local server uses $my_php"
 
-        old_shebang=$(sed -n 1p "${cliScriptName}")
-        sed -i "1c #!${my_php} -q" ${cliScriptName}
+        old_shebang=$(sed -n 1p "${cli_script_name}")
+        sed -i "1c #!${my_php} -q" ${cli_script_name}
 
         echo "Shebang line changed from ${yellow}${old_shebang}$reset to $yellow#!${my_php} -q$reset"
         echo
@@ -1081,7 +1190,7 @@ search_replace_local () {
 
     cd $l_bak_dir
 
-    if [[ "$r_web_addr_alt" ]]
+    if [[ "${r_web_addr_alt-}" ]]
     then
         echo "You have specified more than one remote site URL. Please select which one you are presently trying to use as your search string."
 
@@ -1105,9 +1214,9 @@ search_replace_local () {
 
     fi
 
-    echo "./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p [password hidden for security] -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
+    echo "./$cli_script_name -h "$l_db_host" -u $l_db_user -n $l_db_name -p [password hidden for security] -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
 
-    ./$cliScriptName -h "$l_db_host" -u $l_db_user -n $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" 
+    ./$cli_script_name -h "$l_db_host" -u $l_db_user -n $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" 
 
 }
 
@@ -1118,7 +1227,7 @@ search_replace_local () {
 do_search_replace_remote () {
     [[ "$checked" ]] || do_check_for_dirs
 
-    ssh $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) search_replace_remote;"
+    ssh -q $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) search_replace_remote;"
 }
 
 # ---------------------------------------------------------
@@ -1144,26 +1253,9 @@ search_replace_remote () {
         my_php=$(type -a php | sed 's/^[^/]*//g')
     fi
 
-    default_php=/usr/bin/php
-
-    # replace the shebang line with custom php binary
-    if [[ "$my_php" != "$default_php" ]]
-    then
-
-        echo "${yellow}PHP Binary:$reset Your server uses $my_php"
-
-        old_shebang=$(sed -n 1p "${cliScriptName}")
-        sed -i "1c #!${my_php} -q" $cliScriptName
-
-        echo "Shebang line changed from ${yellow}${old_shebang}$reset to $yellow#!${my_php} -q$reset"
-        echo
-    else
-        echo "${yellow}PHP Binary:$reset Your server uses the default $default_php"
-    fi
-
     echo
 
-    if [[ "$r_web_addr_alt" ]]
+    if [[ "${r_web_addr_alt-}" ]]
     then
         echo "You have specified more than one remote site URL. Please select which one you are presently trying to use as your search string."
 
@@ -1187,23 +1279,23 @@ search_replace_remote () {
 
     fi
 
-    echo "./$cliScriptName -h $r_db_host -u $r_db_user -n $r_db_name -p [password hidden] -c utf\-8 -s $l_web_addr -r $r_web_addr"
+    echo "${my_php} -q $cli_script_name -h $r_db_host -u $r_db_user -n $r_db_name -p [password hidden] -c utf\-8 -s $l_web_addr -r $r_web_addr"
 
-    ./$cliScriptName -h "$r_db_host" -u "$r_db_user" -n "$r_db_name" -p "$r_db_pass" -c utf\-8 -s "$l_web_addr" -r "$r_web_addr"
+    ${my_php} -q $cli_script_name -h "$r_db_host" -u "$r_db_user" -n "$r_db_name" -p "$r_db_pass" -c utf\-8 -s "$l_web_addr" -r "$r_web_addr"
 
     if [[ $? != 0 ]]; then
         echo "$red$msgError$reset Failed to search and replace remote database."
     else
-        echo "${green}$msgSuccess$reset Search and replace complete."
+        echo "${green}$msgSuccess$reset Search and Replace complete."
     fi
 
     # for security purposes, delete search scripts 
-    rm "$cliScriptName" "$searchScriptName"
+    rm "$cli_script_name" "$search_script_name"
 
     # delete the temp file as well
     cd ..
 
-    if [ -f $temp_file ]
+    if [[ -f $temp_file ]]
     then
         rm $temp_file
     fi
@@ -1218,10 +1310,9 @@ do_remote_replace () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
-    ssh $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) replace_remote_db;"
+    ssh -q $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) replace_remote_db;"
 
 }
-
 
 # ---------------------------------------------------------
 # rsync_push ()
@@ -1229,18 +1320,24 @@ do_remote_replace () {
 # folder.
 # ---------------------------------------------------------
 rsync_push () {
-    echo "rsync -rave "ssh -l $r_user" $l_upload_path $r_host:$r_upload_path"
-    rsync -rave "ssh $ssh_port-l $r_user" "$l_upload_path" "$r_host":"$r_upload_path"
+    echo
+    echo "${blue}Synchronizing uploads directories...$reset"
+    echo
+    echo "rsync -qrave "ssh -q $ssh_port-l $r_user" $l_upload_path $r_host:$r_upload_path"
+    rsync -qrave "ssh -q $ssh_port-l $r_user" "$l_upload_path" "$r_host":"$r_upload_path"
 } 
 
 # ---------------------------------------------------------
-# rsync_uploads ()
+# rsync_pull ()
 # Synchronize the local uploads folder with the contents of your remote uploads
 # folder.
 # ---------------------------------------------------------
 rsync_pull () {
-    echo "rsync -rave "ssh -l $r_user" "$r_host":"$r_upload_path" "$l_upload_path""
-    rsync -rave "ssh $ssh_port-l $r_user" "$r_host":"$r_upload_path" "$l_upload_path"
+    echo
+    echo "${blue}Synchronizing uploads directories...$reset"
+    echo
+    echo "rsync -qrave "ssh -q $ssh_port-l $r_user" "$r_host":"$r_upload_path" "$l_upload_path""
+    rsync -qrave "ssh -q $ssh_port-l $r_user" "$r_host":"$r_upload_path" "$l_upload_path"
 } 
 
 # ---------------------------------------------------------
@@ -1249,6 +1346,11 @@ rsync_pull () {
 # ---------------------------------------------------------
 say_goodbye () {
     echo
+    cd $l_site_dir
+    if [[ -f $temp_file ]]
+    then
+        rm $temp_file
+    fi
     echo "${blue}Exiting. Thanks for using SyncDB.$reset"
     echo
 }
@@ -1285,7 +1387,6 @@ push () {
 
 }
 
-
 # ---------------------------------------------------------
 # pull ()
 # Execute a sequence of commands to update your local server with the contents
@@ -1313,20 +1414,21 @@ pull () {
 
 }
 
-
 # ====================================
 #  ACTUAL SCRIPT EXECUTION
 # ====================================
 
 echo
-echo "${blue}SyncDB v0.3$reset > $yellow${@:-push}$reset"
+echo "${blue}SyncDB v0.3.1$reset > $yellow${@:-push}$reset"
 echo
+
+[[ ${auto_update-} == 'true' && ${auto_update_checked:-} != "true" ]] && auto_update
 
 # if an argument is passed (the number of arguments is not equal to zero), then check if that command is valid or not.
 if [ $# -ne 0 ]
 then
     # place all the command names in an array
-    declare -a list_of_methods=(help upload_local_db get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_replace do_search_replace_remote rsync_push do_remote_backup upload_script test_ssh install_search_scripts)
+    declare -a list_of_methods=(help upload_local_db get_local_db_details get_remote_db_details download_remote_db backup_local_db backup_remote_db replace_remote_db search_replace_remote push pull replace_local_db search_replace_local rsync_pull say_goodbye do_remote_replace do_search_replace_remote rsync_push do_remote_backup upload_script test_ssh install_search_scripts auto_update)
 
     # function to check if an item exists in an array
     contains_element () {
