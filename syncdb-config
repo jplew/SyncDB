@@ -67,17 +67,21 @@ no_drop= # set to true if your host sucks
 
 #l_mysql=
 #l_mysqldump=
+#l_php=
 l_mysql=/Applications/MAMP/Library/bin/mysql
 l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
+l_php=/Applications/MAMP/bin/php/php5.3.28/bin/php
 
     # ---------------------------------------------------------
-    # Custom mysql binaries (local)
-    # If you're using MAMP, you need to specify which mysql and mysqldump binaries
-    # you want to invoke: MAMP's. This is because, by default, running mysql or
-    # mysqldump from the command line will execute your system defaults (type
-    # `which mysql` to see where they're located). 
-    #
-    # If you run your own AMP stack, then leave these variables blank.
+    # Custom binaries (local)
+    # If you're using MAMP, you need to specify which mysql, mysqldump, and php
+    # binaries you want to invoke: MAMP's. This is because, by default, running
+    # these from the command line will execute your system defaults (eg.
+    # /usr/bin/php or /usr/bin/mysql). Hint: type `which mysql` or whatever to
+    # see what your shell is currently defaulting to. If you have manually
+    # added MAMP's binaries to your PATH, or if you run your own AMP stack, then
+    # leave these variables blank. 
+    # 
     # ---------------------------------------------------------
 
 auto_update=true

@@ -1158,26 +1158,16 @@ search_replace_local () {
     then
         my_php=$(which php)
     else
-        #if server does not have which installed, use the type command instead, combined with a sed command to strip off the "php is: " part
+        #if server does not have `which` installed, use the `type` command instead, combined with a sed command to strip off the "php is: " part
 
         my_php=$(type -a php | sed 's/^[^/]*//g')
     fi
 
-    default_php=/usr/bin/php
-
-    # replace the shebang line with custom php binary
-    if [[ "$my_php" != "$default_php" ]]
+    if [[ "${l_php-}" ]]
     then
-
-        echo "${yellow}PHP Binary:$reset Your local server uses $my_php"
-
-        old_shebang=$(sed -n 1p "${cli_script_name}")
-        sed -i "1c #!${my_php} -q" ${cli_script_name}
-
-        echo "Shebang line changed from ${yellow}${old_shebang}$reset to $yellow#!${my_php} -q$reset"
-        echo
+        my_php=$l_php
     else
-        echo "${yellow}PHP Binary:$reset Your server uses the default $default_php"
+
     fi
 
     get_local_db_details
@@ -1214,9 +1204,15 @@ search_replace_local () {
 
     fi
 
-    echo "./$cli_script_name -h "$l_db_host" -u $l_db_user -n $l_db_name -p [password hidden for security] -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" "
+    echo "${my_php} -q $cli_script_name -h $l_db_host -u $l_db_user -n $l_db_name -p [password hidden] -c utf\-8 -s -r ${l_web_addr:-$l_web_dir}"
 
-    ./$cli_script_name -h "$l_db_host" -u $l_db_user -n $l_db_name -p $l_db_pass -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}" 
+    ${my_php} -q $cli_script_name -h "$l_db_host" -u "$l_db_user" -n "$l_db_name" -p "$l_db_pass" -c utf\-8 -s "$r_web_addr" -r "${l_web_addr:-$l_web_dir}"
+
+    if [[ $? != 0 ]]; then
+        echo "$red$msgError$reset Failed to search and replace local database."
+    else
+        echo "${green}$msgSuccess$reset Search and Replace complete."
+    fi
 
 }
 
