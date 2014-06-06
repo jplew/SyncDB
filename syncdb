@@ -1166,8 +1166,6 @@ search_replace_local () {
     if [[ "${l_php-}" ]]
     then
         my_php=$l_php
-    else
-
     fi
 
     get_local_db_details
