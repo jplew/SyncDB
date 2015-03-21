@@ -1443,6 +1443,21 @@ then
         help
     fi
 
+    # check for extra runtime arguments
+    for i in "${@:2}"
+    do
+        case $i in
+            # disable ssh strict host key checking
+            -u|--unsecure)
+                ssh_port+="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
+                scp_port+="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
+            ;;
+            *)
+                    # unknown option
+            ;;
+        esac
+    done
+
 fi
 
 # script will execute whichever method is passed to it as an argument.
