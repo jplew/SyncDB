@@ -732,7 +732,7 @@ download_remote_db () {
 
     set -o pipefail
 
-    scp -q "$scp_port"$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
+    scp -q $scp_port$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
 
     if [ $? == 0 -a -f ${r_bak_name2}.bz2 ]; then
         echo
