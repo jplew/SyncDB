@@ -101,7 +101,7 @@ cli_script_name=srdb.cli.php
 srdb_path=https://raw.githubusercontent.com/interconnectit/Search-Replace-DB/master/
 search_script_path=$srdb_path$search_script_name
 cli_script_path=$srdb_path$cli_script_name
-syncdb_path=https://raw.githubusercontent.com/jplew/SyncDB/master/syncdb
+syncdb_path=https://raw.githubusercontent.com/ericstroo/SyncDB/master/syncdb
 # initialize variable. Used because we need to test the SSH connection only once.
 checked=
 
