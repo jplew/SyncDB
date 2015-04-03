@@ -54,7 +54,7 @@ l_web_dir=${PWD##*/}
 l_bak_path2=$l_site_dir/$l_bak_dir/$l_bak_name2
 l_upload_path=$l_site_dir/$l_upload_dir
 r_upload_path=$r_web_dir/$r_upload_dir
-r_site_dir=$HOME/$r_web_dir
+r_site_dir=$r_web_dir
 
 # The --port flag has to be uppercase for `scp`, lowercase for `ssh`. sigh. 
 ssh_port_define="-p $r_port "
@@ -101,7 +101,7 @@ cli_script_name=srdb.cli.php
 srdb_path=https://raw.githubusercontent.com/interconnectit/Search-Replace-DB/master/
 search_script_path=$srdb_path$search_script_name
 cli_script_path=$srdb_path$cli_script_name
-syncdb_path=https://raw.githubusercontent.com/jplew/SyncDB/master/syncdb
+syncdb_path=https://raw.githubusercontent.com/ericstroo/SyncDB/master/syncdb
 # initialize variable. Used because we need to test the SSH connection only once.
 checked=
 
@@ -681,7 +681,7 @@ backup_remote_db () {
 
     echo "${blue}Backing up remote database...$reset"
 
-    cd $HOME/$r_web_dir
+    cd $r_web_dir
 
     if [ ! -d $r_bak_dir ]
     then
@@ -728,11 +728,11 @@ download_remote_db () {
 
     cd $l_bak_dir
 
-    echo "scp -q $scp_port$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 ."
+    echo "scp -q $scp_port$r_user@$r_host:$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 ."
 
     set -o pipefail
 
-    scp -q "$scp_port"$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
+    scp -q "$scp_port"$r_user@$r_host:$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
 
     if [ $? == 0 -a -f ${r_bak_name2}.bz2 ]; then
         echo
@@ -875,9 +875,9 @@ upload_script () {
     #echo
     #if [[ "$difference" ]]
     #then
-        #echo "scp -q $scp_port$(basename $0) $config_file $r_user@$r_host:~/$r_web_dir/"
+        #echo "scp -q $scp_port$(basename $0) $config_file $r_user@$r_host:$r_web_dir/"
         #echo
-        #scp -q ${scp_port}$(basename $0) $config_file $r_user@$r_host:~/$r_web_dir/
+        #scp -q ${scp_port}$(basename $0) $config_file $r_user@$r_host:$r_web_dir/
         #echo
         #echo "$green$msgSuccess$reset Uploaded $(basename $0) and $config_file to: $r_web_dir."
     #else
@@ -890,9 +890,9 @@ upload_script () {
         upload_temp=$temp_file
     fi
 
-    echo "scp -q $scp_port$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:~/$r_web_dir/"
+    echo "scp -q $scp_port$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:$r_web_dir/"
     echo
-    scp -q ${scp_port}$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:~/$r_web_dir/
+    scp -q ${scp_port}$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:$r_web_dir/
     echo
     echo "$green$msgSuccess$reset Uploaded $(basename $0) and $config_file to: $r_web_dir."
 
@@ -931,8 +931,8 @@ upload_local_db () {
 
     if [[ -f "${l_bak_path2}.bz2" ]]
     then
-        echo "scp -q $scp_port${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir"
-        scp -q ${scp_port}${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir
+        echo "scp -q $scp_port${l_bak_path2}.bz2 $r_user@$r_host:$r_web_dir/$r_bak_dir"
+        scp -q ${scp_port}${l_bak_path2}.bz2 $r_user@$r_host:$r_web_dir/$r_bak_dir
     else
         echo "$red$msgError$reset Could not locate the local dump file at $(pwd)/${l_bak_name2}.bz2."
         echo
@@ -1080,7 +1080,7 @@ EOF
     echo
     echo "${blue}Replacing contents of remote database...$reset"
     echo
-    cd $HOME/$r_web_dir/$r_bak_dir
+    cd $r_web_dir/$r_bak_dir
 
     echo "bunzip2 < ${l_bak_name2}.bz2 | mysql -u$r_db_user -p$r_db_pass -h $r_db_host $r_db_name --show-warnings"
 
@@ -1232,7 +1232,7 @@ search_replace_remote () {
 
     check_if_chosen
 
-    cd $HOME/$r_web_dir/$r_bak_dir
+    cd $r_web_dir/$r_bak_dir
 
     install_search_scripts
 
