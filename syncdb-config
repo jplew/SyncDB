@@ -4,6 +4,7 @@
 
 r_user=myusername
 r_host=ftp.mywebsite.com
+r_cert=~/.ssh/wordpress.pem
 r_web_dir=public_html
 r_port= # usually left blank
 
@@ -65,9 +66,12 @@ no_drop= # set to true if your host sucks
     # ---------------------------------------------------------
 
 
-#l_mysql=
-#l_mysqldump=
-#l_php=
+#################### Linux  ####################
+#l_mysql=/usr/local/bin/mysql
+#l_mysqldump=/usr/local/bin/mysqldump
+#l_php=/usr/bin/php
+
+################### MAMP #######################
 l_mysql=/Applications/MAMP/Library/bin/mysql
 l_mysqldump=/Applications/MAMP/Library/bin/mysqldump
 l_php=/Applications/MAMP/bin/php/php5.3.28/bin/php

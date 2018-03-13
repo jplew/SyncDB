@@ -225,10 +225,10 @@ EOT
 test_ssh () {
     echo "${blue}Checking if SSH connection is working...$reset"
     echo
-    echo "ssh -q $ssh_port$r_user@$r_host exit"
+    echo "ssh -i $r_cert -q $ssh_port$r_user@$r_host exit"
 
     #first test method
-    ssh -q $ssh_port$r_user@$r_host exit
+    ssh -q -i $r_cert $ssh_port$r_user@$r_host exit
 
     if [ $? == 0 ] # check if the SSH connection is working
     then
@@ -264,7 +264,7 @@ test_ssh () {
 # ---------------------------------------------------------
 get_local_db_details () {
 
-    echo 
+    echo
     #echo "${blue}Fetching local database login details...$reset"
 
     # Change directory to site root (where local-config.php and wp-config.php are located)
@@ -274,7 +274,7 @@ get_local_db_details () {
         exit
     else
         cd $l_site_dir
-    fi 
+    fi
 
     # If local-config.php is not found (if you're using the default Wordpress
     # architecture rather than using WP-Skeleton like I recommend, then search
@@ -306,7 +306,6 @@ get_local_db_details () {
     then
         return_local_nonstandard
     fi
-
     #Local paths
     l_bak_name1=$now-$l_db_name.mssql
     l_bak_path1=$l_site_dir/$l_bak_dir/$l_bak_name1
@@ -316,10 +315,10 @@ get_local_db_details () {
 # ---------------------------------------------------------
 # return_remote_nonstandard ()
 # Some wp-config files have multiple sets of configuration variables, one
-# for each environment (local, dev, production/live etc...). 
+# for each environment (local, dev, production/live etc...).
 # This function collects all the login info it can find, organizes it into
 # sets, auto-detects which one is the local set, and if necessary asks the user
-# which remote server they want to sync with. 
+# which remote server they want to sync with.
 # ---------------------------------------------------------
 return_remote_nonstandard () {
 
@@ -355,7 +354,7 @@ return_remote_nonstandard () {
     #Checking if DB_HOST was empty for any environments. This means it
     #wasn't hard-coded, and is using _ENV{DATABASE-SERVER} instead. Rather than
     #leave it blank, we want to assign it the value "unset"
-    for (( i = 0 ; i < $number_of_environments ; i++ )) 
+    for (( i = 0 ; i < $number_of_environments ; i++ ))
     do
 
         #when -u is set for bash, one valid way to test the existence of a
@@ -365,7 +364,7 @@ return_remote_nonstandard () {
         then
             db_host=${DATABASE_SERVER:=unset}
 
-            if [[ $db_host ]] 
+            if [[ $db_host ]]
             then
                 host_array[$i]=$db_host
             fi
@@ -379,7 +378,7 @@ return_remote_nonstandard () {
     #for each environment detected, let's test if it's local by checking if
     #anything is set to "root". We're assuming no-one's using "root" as their remote
     #login or password.
-    for (( i = 0 ; i < $number_of_environments ; i++ )) 
+    for (( i = 0 ; i < $number_of_environments ; i++ ))
     do
 
         #add the current environment to the array
@@ -398,7 +397,7 @@ return_remote_nonstandard () {
         do
             #out of all the environments, let's set the default to 0
             local_env=0
-            if [ $j == "root" ] 
+            if [ $j == "root" ]
             then
                 #hopefully only one of the environments is using root as a login
                 local_env=$i
@@ -415,7 +414,7 @@ return_remote_nonstandard () {
 
                 #Display the title, "Environment #x", only once, on the first
                 #pass through the current environment's config values
-                [[ $k == 0 ]] && echo "    ENVIRONMENT #$i" 
+                [[ $k == 0 ]] && echo "    ENVIRONMENT #$i"
                 header=
                 case $k in
                     0 )
@@ -462,9 +461,9 @@ return_remote_nonstandard () {
         r_db_pass=${!remote_env_ref_2}
         r_db_host=${!remote_env_ref_3:-$db_host}
 
-        echo "============================================================" 
-        echo " REMOTE DATABASE DETAILS" 
-        echo "============================================================" 
+        echo "============================================================"
+        echo " REMOTE DATABASE DETAILS"
+        echo "============================================================"
         echo
 
         echo "remote DB_NAME is:       $r_db_name"
@@ -517,7 +516,7 @@ return_local_nonstandard () {
     #Checking if DB_HOST was empty for any environments. This means it
     #wasn't hard-coded, and is using _ENV{DATABASE-SERVER} instead. Rather than
     #leave it blank, we want to assign it the value "unset"
-    for (( i = 0 ; i < $number_of_environments ; i++ )) 
+    for (( i = 0 ; i < $number_of_environments ; i++ ))
     do
 
         #when -u is set for bash, one valid way to test the existence of a
@@ -538,7 +537,7 @@ return_local_nonstandard () {
     #for each environment detected, let's test if it's local by checking if
     #anything is set to "root". We're assuming no-one's using "root" as their remote
     #login or password.
-    for (( i = 0 ; i < $number_of_environments ; i++ )) 
+    for (( i = 0 ; i < $number_of_environments ; i++ ))
     do
 
         #add the current environment to the array
@@ -557,7 +556,7 @@ return_local_nonstandard () {
         do
             #out of all the environments, let's set the default to 0
             local_env=0
-            if [ $j == "root" ] 
+            if [ $j == "root" ]
             then
                 #hopefully only one of the environments is using root as a login
                 local_env=$i
@@ -585,9 +584,9 @@ return_local_nonstandard () {
 
     local_chosen=true
 
-    echo "============================================================" 
-    echo " LOCAL DATABASE DETAILS" 
-    echo "============================================================" 
+    echo "============================================================"
+    echo " LOCAL DATABASE DETAILS"
+    echo "============================================================"
     echo
 
     echo "local DB_NAME is:       $l_db_name"
@@ -643,8 +642,8 @@ get_remote_db_details () {
         exit 1
     else
         cd $r_site_dir
-    fi 
-    
+    fi
+
     if [[ ! -f wp-config.php ]]
     then
         echo "${red}$msgError$reset: Could not locate wp-config.php"
@@ -685,19 +684,19 @@ backup_remote_db () {
 
     if [ ! -d $r_bak_dir ]
     then
-        mkdir $r_bak_dir 
+        mkdir $r_bak_dir
     fi
 
     cd $r_bak_dir
 
-    r_bak_name1=$now-$r_db_name.mssql 
+    r_bak_name1=$now-$r_db_name.mssql
 
     echo "mysqldump -u$r_db_user -p$r_db_pass -h $r_db_host $r_db_name | bzip2 -c > ${r_bak_name1}.bz2"
 
     mysqldump -u$r_db_user -p$r_db_pass -h $r_db_host $r_db_name | bzip2 -c > ${r_bak_name1}.bz2
 
     if [[ $? -eq 1 ]]
-    then 
+    then
         echo ${red}$msgError$reset Could not backup remote database.$reset
         exit 1
     else
@@ -723,16 +722,16 @@ download_remote_db () {
     echo
 
     if [ ! -d $l_bak_dir ] ; then
-        mkdir $l_bak_dir 
-    fi 
+        mkdir $l_bak_dir
+    fi
 
     cd $l_bak_dir
 
-    echo "scp -q $scp_port$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 ."
+    echo "scp -q -i $r_cert $scp_port$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 ."
 
     set -o pipefail
 
-    scp -q "$scp_port"$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
+    scp -q -i $r_cert "$scp_port"$r_user@$r_host:~/$r_web_dir/$r_bak_dir/${r_bak_name2}.bz2 .
 
     if [ $? == 0 -a -f ${r_bak_name2}.bz2 ]; then
         echo
@@ -751,13 +750,13 @@ backup_local_db () {
 
     get_local_db_details
 
-    echo "${blue}Backing up the local database...$reset" 
+    echo "${blue}Backing up the local database...$reset"
 
     cd $l_site_dir
 
     if [ ! -d $l_bak_dir ]
     then
-        mkdir $l_bak_dir; 
+        mkdir $l_bak_dir;
     fi
 
     cd $l_bak_dir
@@ -780,6 +779,7 @@ backup_local_db () {
         exit 1
     fi
 
+
     #echo "cp ${l_bak_name1}.bz2 ${l_bak_name2}.bz2"
     echo
     cp ${l_bak_name1}.bz2 ${l_bak_name2}.bz2
@@ -792,7 +792,7 @@ backup_local_db () {
 # ---------------------------------------------------------
 replace_local_db () {
 
-    echo "${blue}Dropping local database...$reset" 
+    echo "${blue}Dropping local database...$reset"
 
     echo
     get_local_db_details
@@ -817,7 +817,7 @@ EOF
 
     set -o pipefail
 
-    if [ -f "${r_bak_name2}.bz2" ] 
+    if [ -f "${r_bak_name2}.bz2" ]
     then
         bunzip2 < "${r_bak_name2}.bz2" | "${l_mysql:-mysql}" "-u$l_db_user" "-p$l_db_pass" -h "$l_db_host" "$l_db_name" --show-warnings
 
@@ -836,7 +836,7 @@ EOF
         exit 1
     fi
 
-    echo 
+    echo
 
 }
 
@@ -848,7 +848,7 @@ do_check_for_dirs () {
 
     echo "Checking for existence of remote directories..."
 
-    ssh -q ${ssh_port}"$r_user"@"$r_host" "if [[ ! -d "$r_web_dir" ]]; then echo "Remote directory does not exist: $r_web_dir"; exit 1; fi; cd "$r_web_dir"; if [[ ! -d "$r_bak_dir" ]]; then mkdir "$r_bak_dir"; fi;" 
+    ssh -q -i $r_cert ${ssh_port}"$r_user"@"$r_host" "if [[ ! -d "$r_web_dir" ]]; then echo "Remote directory does not exist: $r_web_dir"; exit 1; fi; cd "$r_web_dir"; if [[ ! -d "$r_bak_dir" ]]; then mkdir "$r_bak_dir"; fi;"
 
     checked=true
 }
@@ -890,9 +890,9 @@ upload_script () {
         upload_temp=$temp_file
     fi
 
-    echo "scp -q $scp_port$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:~/$r_web_dir/"
+    echo "scp -q -i $r_cert $scp_port$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:~/$r_web_dir"
     echo
-    scp -q ${scp_port}$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:~/$r_web_dir/
+    scp -q -i $r_cert ${scp_port}$(basename $0) $config_file ${upload_temp-} $r_user@$r_host:~/$r_web_dir
     echo
     echo "$green$msgSuccess$reset Uploaded $(basename $0) and $config_file to: $r_web_dir."
 
@@ -910,8 +910,8 @@ do_remote_backup () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
-    echo "ssh -qt $ssh_port$r_user@$r_host cd $r_web_dir; chmod +x $(basename $0); ./$(basename $0) backup_remote_db;"
-    ssh -qt $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) backup_remote_db;"
+    echo "ssh -qt -i $r_cert $ssh_port$r_user@$r_host cd $r_web_dir; chmod +x $(basename $0); ./$(basename $0) backup_remote_db;"
+    ssh -qt -i $r_cert $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) backup_remote_db;"
 
 }
 
@@ -931,8 +931,8 @@ upload_local_db () {
 
     if [[ -f "${l_bak_path2}.bz2" ]]
     then
-        echo "scp -q $scp_port${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir"
-        scp -q ${scp_port}${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir
+        echo "scp -q -i $r_cert $scp_port${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir"
+        scp -q -i $r_cert ${scp_port}${l_bak_path2}.bz2 $r_user@$r_host:~/$r_web_dir/$r_bak_dir
     else
         echo "$red$msgError$reset Could not locate the local dump file at $(pwd)/${l_bak_name2}.bz2."
         echo
@@ -942,8 +942,8 @@ upload_local_db () {
     echo
 
     #test whether the file was actually uploaded or not
-    #echo "if ssh $ssh_port$r_user@$r_host test -e $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2" 
-    if ssh -q ${ssh_port}"$r_user"@"$r_host" test -e "$r_web_dir"/"$r_bak_dir"/${l_bak_name2}.bz2 
+    #echo "if ssh $ssh_port$r_user@$r_host test -e $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2"
+    if ssh -q -i $r_cert ${ssh_port}"$r_user"@"$r_host" test -e "$r_web_dir"/"$r_bak_dir"/${l_bak_name2}.bz2
     then
         echo
         echo "$green$msgSuccess$reset Dump file uploaded to: $r_web_dir/$r_bak_dir/${l_bak_name2}.bz2"
@@ -1020,7 +1020,7 @@ mysql_check_remote () {
 # configuration. This only applies for nonstandard wp-configs.
 # ---------------------------------------------------------
 check_if_chosen () {
-    
+
     #After the first time the user has selected his remote environment, a
     #temporary file is created which stores the remote database login values.
     #This function sources those values from the temp file, rather than
@@ -1041,7 +1041,7 @@ replace_remote_db () {
 
     check_if_chosen
 
-    echo "${blue}Dropping remote database...$reset" 
+    echo "${blue}Dropping remote database...$reset"
 
     echo
 
@@ -1107,8 +1107,8 @@ install_search_scripts () {
     echo "${blue}Installing search and replace scripts...$reset"
     echo
 
-    if [ ! -f "$search_script_name" -o ! -f "$cli_script_name" ] 
-    then 
+    if [ ! -f "$search_script_name" -o ! -f "$cli_script_name" ]
+    then
         echo "${blue}Downloading $search_script_name and $cli_script_name...$reset"
         echo
 
@@ -1221,7 +1221,7 @@ search_replace_local () {
 do_search_replace_remote () {
     [[ "$checked" ]] || do_check_for_dirs
 
-    ssh -q $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) search_replace_remote;"
+    ssh -q -i $r_cert $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) search_replace_remote;"
 }
 
 # ---------------------------------------------------------
@@ -1237,7 +1237,7 @@ search_replace_remote () {
     install_search_scripts
 
     echo
-    echo "${blue}Search and replace database fields...$reset" 
+    echo "${blue}Search and replace database fields...$reset"
 
     if command -v which >/dev/null 2>&1
     then
@@ -1283,7 +1283,7 @@ search_replace_remote () {
         echo "${green}$msgSuccess$reset Search and Replace complete."
     fi
 
-    # for security purposes, delete search scripts 
+    # for security purposes, delete search scripts
     rm "$cli_script_name" "$search_script_name"
 
     # delete the temp file as well
@@ -1304,7 +1304,7 @@ do_remote_replace () {
 
     [[ "$checked" ]] || do_check_for_dirs
 
-    ssh -q $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) replace_remote_db;"
+    ssh -q -i $r_cert $ssh_port$r_user@$r_host "cd $r_web_dir; if [ ! -f .bashrc -a -f /etc/profile ]; then . /etc/profile; fi; ./$(basename $0) replace_remote_db;"
 
 }
 
@@ -1317,9 +1317,9 @@ rsync_push () {
     echo
     echo "${blue}Synchronizing uploads directories...$reset"
     echo
-    echo "rsync -qrave "ssh -q $ssh_port-l $r_user" $l_upload_path $r_host:$r_upload_path"
-    rsync -qrave "ssh -q $ssh_port-l $r_user" "$l_upload_path" "$r_host":"$r_upload_path"
-} 
+    echo "rsync -qrave "ssh -q -i $r_cert $ssh_port-l $r_user" $l_upload_path $r_host:$r_upload_path"
+    rsync -qrave "ssh -q -i $r_cert $ssh_port-l $r_user" "$l_upload_path" "$r_host":"$r_upload_path"
+}
 
 # ---------------------------------------------------------
 # rsync_pull ()
@@ -1330,8 +1330,8 @@ rsync_pull () {
     echo
     echo "${blue}Synchronizing uploads directories...$reset"
     echo
-    echo "rsync -qrave "ssh -q $ssh_port-l $r_user" "$r_host":"$r_upload_path" "$l_upload_path""
-    rsync -qrave "ssh -q $ssh_port-l $r_user" "$r_host":"$r_upload_path" "$l_upload_path"
+    echo "rsync -qrave "ssh -q -i $r_cert $ssh_port-l $r_user" "$r_host":"$r_upload_path" "$l_upload_path""
+    rsync -qrave "ssh -q -i $r_cert $ssh_port-l $r_user" "$r_host":"$r_upload_path" "$l_upload_path"
 } 
 
 # ---------------------------------------------------------
